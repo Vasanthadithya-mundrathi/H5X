@@ -1,0 +1,57 @@
+MIT License
+
+Copyright (c) 2025 H5X Engine Team - Vasanthadithya Mundrathi and Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+Additional Terms for H5X Engine:
+
+1. EDUCATIONAL USE: This software is provided for educational, research, and 
+   legitimate software protection purposes only.
+
+2. RESPONSIBLE USE: Users must comply with all applicable laws and regulations
+   when using this obfuscation technology.
+
+3. NO MALICIOUS USE: This software must not be used to obfuscate malicious 
+   code, malware, or any software intended to harm computer systems or users.
+
+4. ATTRIBUTION: When using H5X Engine in commercial products or research 
+   publications, appropriate attribution to the H5X Engine project is 
+   appreciated but not required.
+
+5. THIRD-PARTY COMPONENTS: This project includes components from:
+   - LLVM Project (Apache License 2.0)
+   - OpenSSL (Apache License 2.0)
+   - JsonCpp (MIT License)
+   - libcurl (MIT/X derivative license)
+
+6. PATENT NOTICE: This software may implement patented algorithms. Users are 
+   responsible for ensuring they have appropriate patent licenses for their 
+   use case.
+
+7. EXPORT RESTRICTIONS: Users must comply with export control laws and 
+   regulations in their jurisdiction when distributing this software or 
+   derived works internationally.
+
+For questions about licensing, commercial use, or enterprise support, please 
+contact: support@h5x.dev
+
+H5X Engine Project: https://github.com/Vasanthadithya-mundrathi/H5X

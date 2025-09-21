@@ -1,0 +1,170 @@
+# H5X Engine .gitignore
+
+# Build artifacts
+build/
+bin/
+lib/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CPackConfig.cmake
+CPackSourceConfig.cmake
+CTestTestfile.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+!cmake/*.cmake.in
+
+# LLVM build artifacts
+*.bc
+*.ll
+*.s
+*.opt
+
+# Temporary and output files
+temp/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# Logs
+logs/*.log
+*.log
+log/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+.DS_Store
+Thumbs.db
+
+# Language-specific
+## C/C++
+*.i
+*.ii
+*.s
+*.d
+*.gch
+*.pch
+*.cache
+core
+core.*
+
+## Python (for scripts)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.env
+
+## Node.js (for Ganache)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test artifacts
+test-results/
+coverage/
+*.gcov
+*.gcda
+*.gcno
+
+# Obfuscation outputs (keep examples but ignore test runs)
+output/obfuscated/*.bin
+output/obfuscated/*.exe  
+output/obfuscated/test_*
+output/reports/test_*
+!output/obfuscated/.gitkeep
+!output/reports/.gitkeep
+
+# Archive (test artifacts)
+archive/tests/binaries/*
+archive/tests/reports/*
+archive/tests/temp_files/*
+!archive/tests/binaries/.gitkeep
+!archive/tests/reports/.gitkeep
+!archive/tests/temp_files/.gitkeep
+
+# Blockchain artifacts
+.ganache/
+ganache-db/
+blockchain-data/
+
+# Configuration (keep templates)
+config/local.json
+config/production.json
+config/development.json
+!config/config.json
+
+# Documentation builds
+docs/build/
+docs/_build/
+*.pdf
+!H5X-Project-Documentation-TeamGuide.pdf
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.orig
+*.rej
+README_old.md
+*.backup
+
+# Development tools
+.clang-format
+.clang-tidy
+compile_commands.json
+
+# Debugging
+*.dSYM/
+*.debug
+gdb.txt
+valgrind.log
+
+# Package managers
+*.deb
+*.rpm
+*.dmg
+*.pkg
+
+# Security
+*.key
+*.pem
+*.crt
+*.p12
+secrets.json
+.env.local
+.env.production
+
+# Performance profiling
+*.prof
+*.perf
+perf.data*
+
+# Static analysis
+cppcheck.xml
+scan-build/

@@ -1,0 +1,100 @@
+{
+  "obfuscation": {
+    "default_level": 2,
+    "techniques": {
+      "control_flow_flattening": {
+        "enabled": true,
+        "complexity_factor": 2,
+        "preserve_semantics": true,
+        "dispatcher_based": true
+      },
+      "instruction_substitution": {
+        "enabled": true,
+        "substitution_probability": 0.3,
+        "arithmetic_operations": true,
+        "logical_operations": true,
+        "bitwise_transforms": true
+      },
+      "string_obfuscation": {
+        "enabled": true,
+        "encryption_algorithm": "XOR",
+        "key_derivation": "random",
+        "dynamic_decryption": true
+      },
+      "bogus_control_flow": {
+        "enabled": true,
+        "opaque_predicates": true,
+        "dummy_functions": true,
+        "unreachable_code": true
+      },
+      "anti_analysis": {
+        "enabled": false,
+        "anti_debugging": false,
+        "anti_virtualization": true,
+        "packing_detection": true
+      }
+    }
+  },
+  "ai_optimization": {
+    "enabled": true,
+    "genetic_algorithm": {
+      "population_size": 3,
+      "generations": 2,
+      "mutation_rate": 0.1,
+      "crossover_rate": 0.8,
+      "elitism_ratio": 0.1
+    },
+    "fitness_function": {
+      "security_weight": 0.7,
+      "performance_weight": 0.3,
+      "complexity_threshold": 1000
+    }
+  },
+  "blockchain": {
+    "enabled": true,
+    "network": "ganache-local",
+    "rpc_endpoint": "http://127.0.0.1:8545",
+    "contract_address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "private_key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    "gas_limit": 200000,
+    "gas_price": "20000000000",
+    "chain_id": 1337,
+    "confirmation_blocks": 1
+  },
+  "compilation": {
+    "optimization_level": "O2",
+    "target_architectures": ["x86_64", "aarch64"],
+    "target_platforms": ["linux", "windows"],
+    "debug_symbols": false,
+    "strip_binaries": true
+  },
+  "reporting": {
+    "generate_detailed_report": true,
+    "include_metrics": true,
+    "include_recommendations": true,
+    "export_formats": ["json", "html", "txt"],
+    "include_graphs": false
+  },
+  "performance": {
+    "parallel_processing": true,
+    "max_threads": 4,
+    "memory_limit_mb": 6144,
+    "temp_directory": "/tmp/h5x",
+    "cache_enabled": true,
+    "m1_optimized": true
+  },
+  "security": {
+    "secure_random_seed": true,
+    "anti_tampering": true,
+    "integrity_checks": true,
+    "audit_logging": true
+  },
+  "logging": {
+    "level": "INFO",
+    "console_output": true,
+    "file_output": true,
+    "log_file": "logs/h5x.log",
+    "max_file_size_mb": 50,
+    "backup_count": 5
+  }
+}
