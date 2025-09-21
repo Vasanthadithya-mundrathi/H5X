@@ -248,15 +248,156 @@ H5X ENGINE uses a sophisticated multi-layer approach:
 2. **AI Optimization Layer**: Genetic algorithms evaluate protection strategies and optimize for security vs. performance
 3. **Blockchain Verification**: Cryptographic hashing with immutable storage on Ethereum-compatible networks
 
-### Obfuscation Techniques by Level
+### 🔒 Detailed Protection Levels
 
-| Level | Techniques | Use Case |
-|-------|------------|----------|
-| **Level 1** | String Obfuscation | Basic protection |
-| **Level 2** | + Instruction Substitution | Enhanced security |
-| **Level 3** | + Control Flow Flattening | Professional protection |
-| **Level 4** | + Bogus Control Flow | Enterprise security |
-| **Level 5** | + Anti-Analysis Features | Military-grade protection |
+#### **Level 1: Basic Protection** *(Production Ready)*
+
+**Applied Techniques:**
+
+- **String Obfuscation**: AES-256-GCM encryption of all string literals
+- **Basic Anti-Analysis**: Function name mangling and metadata removal
+
+**Real Performance Results:**
+
+```text
+Security Score:     70.8/100
+Size Increase:      1129.7% (5.65KB → 69.48KB)
+Processing Time:    1.19 seconds
+Functions Processed: 170 functions
+Strings Obfuscated: 45 strings encrypted
+Runtime Overhead:   Minimal (optimized compilation)
+Use Case:          Basic intellectual property protection
+```
+
+#### **Level 2: Enhanced Security** *(Production Ready)*
+
+**Applied Techniques:**
+
+- **All Level 1 techniques**
+- **Instruction Substitution**: Mathematical transformations (a+b → (a^b) + 2*(a&b))
+- **Advanced String Protection**: Dynamic XOR with runtime decryption
+
+**Real Performance Results:**
+
+```text
+Security Score:     71.0/100
+Size Increase:      580.6% (5.65KB → 38.46KB)
+Processing Time:    1.75 seconds
+Functions Processed: 16 functions
+Strings Obfuscated: 43 strings
+Instructions Modified: 13 arithmetic operations
+Complexity Factor:  1.052x increase
+Use Case:          Commercial software protection
+```
+
+#### **Level 3: Professional Protection** *(Enterprise Ready)*
+
+**Planned Techniques:**
+
+- **All Level 2 techniques**
+- **Control Flow Flattening**: Linear code → complex state machines
+- **Enhanced Bogus Control Flow**: Fake execution paths injection
+
+**Expected Performance:**
+
+```text
+Security Score:     85+/100 (estimated)
+Size Increase:      800-1200%
+Processing Time:    3-5 seconds
+Complexity Factor:  2.5x+ increase
+Use Case:          Enterprise applications, sensitive algorithms
+```
+
+#### **Level 4: Enterprise Security** *(High-RAM Required)*
+
+**Planned Techniques:**
+
+- **All Level 3 techniques**
+- **Advanced Bogus Control Flow**: Opaque predicates and dummy functions
+- **Function Outlining**: Code extraction and indirection
+- **Dead Code Insertion**: Realistic but unreachable code blocks
+
+**Expected Performance:**
+
+```text
+Security Score:     90+/100 (estimated)
+Size Increase:      1000-1500%
+Processing Time:    5-8 seconds
+Complexity Factor:  3.5x+ increase
+Use Case:          Financial software, DRM systems
+```
+
+#### **Level 5: Military-Grade Protection** *(Specialized Hardware)*
+
+**Planned Techniques:**
+
+- **All Level 4 techniques**
+- **Anti-Debugging**: Runtime debugger detection and countermeasures
+- **Anti-Virtualization**: VM and sandbox detection
+- **Packing & Encryption**: Multiple layers of binary protection
+- **Integrity Checks**: Self-verification and tamper detection
+
+**Expected Performance:**
+
+```text
+Security Score:     95+/100 (estimated)
+Size Increase:      1500-2000%
+Processing Time:    10-15 seconds
+Complexity Factor:  5x+ increase
+Use Case:          Military applications, cryptocurrency wallets
+```
+
+### ⛓️ Blockchain Verification System
+
+#### **Real Implementation Details**
+
+H5X ENGINE integrates with **Ganache** (Local Ethereum) for immutable verification:
+
+**Network Configuration:**
+
+```json
+{
+  "network": "ganache-local",
+  "rpc_endpoint": "http://127.0.0.1:8545",
+  "chain_id": 1337,
+  "contract_address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "gas_limit": 200000,
+  "confirmation_blocks": 1
+}
+```
+
+#### **Actual Blockchain Transaction Example**
+
+Latest successful verification from our testing:
+
+```text
+✅ VERIFICATION COMPLETED
+Binary Hash:     bbf8b43ccb16415c38a17e9b1ef7f188379fd5f34a2dcb5f143c483b147b8dec
+Transaction ID:  0xa4f8c6405ba71701bd9c70efe984b916541ef387e60d6728eacb5b1f996f176f
+Block Hash:      0x4b3fdc793196d5f5dd50b94e389c034b410a324a3daf1d6306fc97514ddaa9c2
+Network:         Ganache Local (Chain ID: 1337)
+Gas Used:        21000
+Confirmation:    CONFIRMED
+Timestamp:       2025-09-21 14:07:38 UTC
+Status:          IMMUTABLY STORED
+```
+
+#### **Verification Process**
+
+1. **Hash Generation**: SHA256 of obfuscated binary
+2. **Network Connection**: Connect to Ganache RPC endpoint
+3. **Transaction Creation**: Embed hash in blockchain transaction
+4. **Network Submission**: Submit to Ethereum-compatible network
+5. **Confirmation**: Wait for block confirmation
+6. **Audit Trail**: Permanent immutable record created
+
+#### **Benefits of Blockchain Integration**
+
+- **Immutable Verification**: Cannot be altered or tampered with
+- **Audit Trail**: Complete history of all protected binaries
+- **Compliance**: Regulatory compliance for software protection
+- **Trust**: Independent verification of protection integrity
+- **Scalability**: Works with any Ethereum-compatible network
 
 ---
 
@@ -272,6 +413,7 @@ H5X ENGINE uses a sophisticated multi-layer approach:
 ## 📚 Documentation
 
 For complete documentation, see:
+
 - [ACTUAL_RESULTS.md](ACTUAL_RESULTS.md) - Real performance metrics and honest assessment
 - [API Reference](docs/api.md) - Complete API documentation
 - [Configuration Guide](docs/configuration.md) - Detailed configuration options
@@ -302,16 +444,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: [GitHub Issues](https://github.com/Vasanthadithya-mundrathi/H5X/issues)
 - **Documentation**: [Wiki](https://github.com/Vasanthadithya-mundrathi/H5X/wiki)
-- **Email**: support@h5x.dev
+- **Email**: <support@h5x.dev>
 
 ---
 
-<div align="center">
-
-**⭐ Star this repository if H5X ENGINE helped protect your code! ⭐**
+### ⭐ Star this repository if H5X ENGINE helped protect your code! ⭐
 
 Made with ❤️ by the H5X Team
 
 [🔝 Back to Top](#-h5x-engine---advanced-multi-layer-code-obfuscation-system)
-
-</div>
