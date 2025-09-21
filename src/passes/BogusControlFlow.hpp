@@ -9,6 +9,9 @@ namespace h5x {
 class BogusControlFlowPass : public llvm::PassInfoMixin<BogusControlFlowPass> {
 public:
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+
+private:
+    bool addBogusControlFlow(llvm::BasicBlock &BB);
 };
 
 } // namespace h5x

@@ -7,6 +7,7 @@
 
 #include "../src/core/H5XObfuscationEngine.hpp"
 #include "../src/utils/Logger.hpp"
+#include "../src/utils/ConfigParser.hpp"
 
 using namespace h5x;
 
@@ -452,6 +453,282 @@ int cmd_batch(const CLIArgs& args) {
     }
 }
 
+int cmd_config(const CLIArgs& args) {
+    std::string config_file = args.config_file.empty() ? "config/config.json" : args.config_file;
+    
+    if (args.input_file == "show" || args.input_file.empty()) {
+        // Show current configuration
+        try {
+            auto config = ConfigParser::loadFromFile(config_file);
+            
+            std::cout << "\n🔧 H5X ENGINE CONFIGURATION\n";
+            std::cout << "═══════════════════════════════════════\n";
+            std::cout << "📄 Config File: " << config_file << "\n\n";
+            
+            std::cout << "🛡️  OBFUSCATION SETTINGS:\n";
+            std::cout << "  Level:                   " << config.obfuscation_level << "\n";
+            std::cout << "  String Obfuscation:      " << (config.enable_string_obfuscation ? "✓ Enabled" : "✗ Disabled") << "\n";
+            std::cout << "  Instruction Substitution: " << (config.enable_instruction_substitution ? "✓ Enabled" : "✗ Disabled") << "\n";
+            std::cout << "  Control Flow Flattening: " << (config.enable_control_flow_flattening ? "✓ Enabled" : "✗ Disabled") << "\n";
+            std::cout << "  Bogus Control Flow:      " << (config.enable_bogus_control_flow ? "✓ Enabled" : "✗ Disabled") << "\n";
+            std::cout << "  Anti-Analysis:           " << (config.enable_anti_analysis ? "✓ Enabled" : "✗ Disabled") << "\n";
+            
+            std::cout << "\n🧠 AI OPTIMIZATION:\n";
+            std::cout << "  AI Enabled:              " << (config.enable_ai_optimization ? "✓ Enabled" : "✗ Disabled") << "\n";
+            if (config.enable_ai_optimization) {
+                std::cout << "  Generations:             " << config.genetic_algorithm_generations << "\n";
+                std::cout << "  Mutation Rate:           " << std::fixed << std::setprecision(3) << config.mutation_rate << "\n";
+                std::cout << "  Crossover Rate:          " << std::fixed << std::setprecision(3) << config.crossover_rate << "\n";
+            }
+            
+            std::cout << "\n⛓️  BLOCKCHAIN VERIFICATION:\n";
+            std::cout << "  Blockchain Enabled:      " << (config.enable_blockchain_verification ? "✓ Enabled" : "✗ Disabled") << "\n";
+            if (config.enable_blockchain_verification) {
+                std::cout << "  Network:                 " << config.blockchain_network << "\n";
+                std::cout << "  Contract Address:        " << config.verification_contract_address << "\n";
+            }
+            
+            std::cout << "\n📊 OUTPUT SETTINGS:\n";
+            std::cout << "  Generate Reports:        " << (config.generate_detailed_report ? "✓ Enabled" : "✗ Disabled") << "\n";
+            std::cout << "  Output Directory:        " << config.output_directory << "\n";
+            
+            std::cout << "\n";
+            return 0;
+            
+        } catch (const std::exception& e) {
+            std::cerr << "❌ Error reading configuration: " << e.what() << "\n";
+            return 1;
+        }
+    }
+    
+    else if (args.input_file == "set") {
+        // Set configuration value
+        if (args.output_file.empty()) {
+            std::cerr << "❌ Error: No configuration key specified\n";
+            std::cerr << "Usage: h5x-cli config set <key> <value>\n";
+            std::cerr << "\nAvailable keys:\n";
+            std::cerr << "  obfuscation.level <1-5>\n";
+            std::cerr << "  obfuscation.string_obfuscation <true|false>\n";
+            std::cerr << "  obfuscation.instruction_substitution <true|false>\n";
+            std::cerr << "  obfuscation.control_flow_flattening <true|false>\n";
+            std::cerr << "  obfuscation.bogus_control_flow <true|false>\n";
+            std::cerr << "  obfuscation.anti_analysis <true|false>\n";
+            std::cerr << "  ai.enabled <true|false>\n";
+            std::cerr << "  ai.population_size <number>\n";
+            std::cerr << "  ai.generations <number>\n";
+            std::cerr << "  ai.mutation_rate <0.0-1.0>\n";
+            std::cerr << "  blockchain.enabled <true|false>\n";
+            std::cerr << "  blockchain.network <string>\n";
+            std::cerr << "  blockchain.rpc_endpoint <url>\n";
+            std::cerr << "  output.generate_report <true|false>\n";
+            std::cerr << "  output.verbose <true|false>\n";
+            return 1;
+        }
+        
+        std::string key = args.output_file;
+        std::string value = "";
+        if (!args.targets.empty()) {
+            value = args.targets[0];
+        } else {
+            std::cerr << "❌ Error: No value specified for key '" << key << "'\n";
+            return 1;
+        }
+        
+        try {
+            auto config = ConfigParser::loadFromFile(config_file);
+            
+            // Update configuration based on key
+            if (key == "obfuscation.level") {
+                config.obfuscation_level = std::stoi(value);
+                if (config.obfuscation_level < 1 || config.obfuscation_level > 5) {
+                    std::cerr << "❌ Error: Level must be between 1 and 5\n";
+                    return 1;
+                }
+            }
+            else if (key == "obfuscation.string_obfuscation") {
+                config.enable_string_obfuscation = (value == "true" || value == "1");
+            }
+            else if (key == "obfuscation.instruction_substitution") {
+                config.enable_instruction_substitution = (value == "true" || value == "1");
+            }
+            else if (key == "obfuscation.control_flow_flattening") {
+                config.enable_control_flow_flattening = (value == "true" || value == "1");
+            }
+            else if (key == "obfuscation.bogus_control_flow") {
+                config.enable_bogus_control_flow = (value == "true" || value == "1");
+            }
+            else if (key == "obfuscation.anti_analysis") {
+                config.enable_anti_analysis = (value == "true" || value == "1");
+            }
+            else if (key == "ai.enabled") {
+                config.enable_ai_optimization = (value == "true" || value == "1");
+            }
+            else if (key == "ai.generations") {
+                config.genetic_algorithm_generations = std::stoi(value);
+                if (config.genetic_algorithm_generations < 5 || config.genetic_algorithm_generations > 1000) {
+                    std::cerr << "❌ Error: Generations must be between 5 and 1000\n";
+                    return 1;
+                }
+            }
+            else if (key == "ai.mutation_rate") {
+                config.mutation_rate = std::stod(value);
+                if (config.mutation_rate < 0.0 || config.mutation_rate > 1.0) {
+                    std::cerr << "❌ Error: Mutation rate must be between 0.0 and 1.0\n";
+                    return 1;
+                }
+            }
+            else if (key == "ai.crossover_rate") {
+                config.crossover_rate = std::stod(value);
+                if (config.crossover_rate < 0.0 || config.crossover_rate > 1.0) {
+                    std::cerr << "❌ Error: Crossover rate must be between 0.0 and 1.0\n";
+                    return 1;
+                }
+            }
+            else if (key == "blockchain.enabled") {
+                config.enable_blockchain_verification = (value == "true" || value == "1");
+            }
+            else if (key == "blockchain.network") {
+                config.blockchain_network = value;
+            }
+            else if (key == "blockchain.contract_address") {
+                config.verification_contract_address = value;
+            }
+            else if (key == "output.generate_report") {
+                config.generate_detailed_report = (value == "true" || value == "1");
+            }
+            else if (key == "output.directory") {
+                config.output_directory = value;
+            }
+            else {
+                std::cerr << "❌ Error: Unknown configuration key '" << key << "'\n";
+                return 1;
+            }
+            
+            // Save updated configuration
+            if (ConfigParser::saveToFile(config, config_file)) {
+                std::cout << "✅ Configuration updated successfully\n";
+                std::cout << "   " << key << " = " << value << "\n";
+                return 0;
+            } else {
+                std::cerr << "❌ Error: Failed to save configuration\n";
+                return 1;
+            }
+            
+        } catch (const std::exception& e) {
+            std::cerr << "❌ Error updating configuration: " << e.what() << "\n";
+            return 1;
+        }
+    }
+    
+    else if (args.input_file == "get") {
+        // Get configuration value
+        if (args.output_file.empty()) {
+            std::cerr << "❌ Error: No configuration key specified\n";
+            std::cerr << "Usage: h5x-cli config get <key>\n";
+            return 1;
+        }
+        
+        std::string key = args.output_file;
+        
+        try {
+            auto config = ConfigParser::loadFromFile(config_file);
+            
+            if (key == "obfuscation.level") {
+                std::cout << config.obfuscation_level << "\n";
+            }
+            else if (key == "obfuscation.string_obfuscation") {
+                std::cout << (config.enable_string_obfuscation ? "true" : "false") << "\n";
+            }
+            else if (key == "obfuscation.instruction_substitution") {
+                std::cout << (config.enable_instruction_substitution ? "true" : "false") << "\n";
+            }
+            else if (key == "obfuscation.control_flow_flattening") {
+                std::cout << (config.enable_control_flow_flattening ? "true" : "false") << "\n";
+            }
+            else if (key == "obfuscation.bogus_control_flow") {
+                std::cout << (config.enable_bogus_control_flow ? "true" : "false") << "\n";
+            }
+            else if (key == "obfuscation.anti_analysis") {
+                std::cout << (config.enable_anti_analysis ? "true" : "false") << "\n";
+            }
+            else if (key == "ai.enabled") {
+                std::cout << (config.enable_ai_optimization ? "true" : "false") << "\n";
+            }
+            else if (key == "ai.generations") {
+                std::cout << config.genetic_algorithm_generations << "\n";
+            }
+            else if (key == "ai.mutation_rate") {
+                std::cout << std::fixed << std::setprecision(3) << config.mutation_rate << "\n";
+            }
+            else if (key == "ai.crossover_rate") {
+                std::cout << std::fixed << std::setprecision(3) << config.crossover_rate << "\n";
+            }
+            else if (key == "blockchain.enabled") {
+                std::cout << (config.enable_blockchain_verification ? "true" : "false") << "\n";
+            }
+            else if (key == "blockchain.network") {
+                std::cout << config.blockchain_network << "\n";
+            }
+            else if (key == "blockchain.contract_address") {
+                std::cout << config.verification_contract_address << "\n";
+            }
+            else if (key == "output.generate_report") {
+                std::cout << (config.generate_detailed_report ? "true" : "false") << "\n";
+            }
+            else if (key == "output.directory") {
+                std::cout << config.output_directory << "\n";
+            }
+            else {
+                std::cerr << "❌ Error: Unknown configuration key '" << key << "'\n";
+                return 1;
+            }
+            
+            return 0;
+            
+        } catch (const std::exception& e) {
+            std::cerr << "❌ Error reading configuration: " << e.what() << "\n";
+            return 1;
+        }
+    }
+    
+    else if (args.input_file == "validate") {
+        // Validate configuration file
+        try {
+            auto config = ConfigParser::loadFromFile(config_file);
+            std::cout << "✅ Configuration file is valid\n";
+            return 0;
+        } catch (const std::exception& e) {
+            std::cerr << "❌ Configuration validation failed: " << e.what() << "\n";
+            return 1;
+        }
+    }
+    
+    else if (args.input_file == "init") {
+        // Initialize default configuration
+        std::string output_file = args.output_file.empty() ? config_file : args.output_file;
+        
+        try {
+            auto default_config = ConfigParser::getDefaultConfig();
+            if (ConfigParser::saveToFile(default_config, output_file)) {
+                std::cout << "✅ Default configuration created: " << output_file << "\n";
+                return 0;
+            } else {
+                std::cerr << "❌ Error: Failed to create configuration file\n";
+                return 1;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "❌ Error creating configuration: " << e.what() << "\n";
+            return 1;
+        }
+    }
+    
+    else {
+        std::cerr << "❌ Error: Unknown config command '" << args.input_file << "'\n";
+        std::cerr << "Usage: h5x-cli config [show|set|get|validate|init]\n";
+        return 1;
+    }
+}
+
 int main(int argc, char* argv[]) {
     // Parse command line arguments
     CLIArgs args = parse_arguments(argc, argv);
@@ -471,13 +748,7 @@ int main(int argc, char* argv[]) {
 
     // Handle configuration
     if (args.command == "config") {
-        if (args.input_file == "show" || args.input_file.empty()) {
-            print_config();
-            return 0;
-        }
-        // Add config set functionality here
-        std::cout << "Configuration management not yet implemented\n";
-        return 0;
+        return cmd_config(args);
     }
 
     // Print banner for other commands unless quiet

@@ -1,0 +1,50 @@
+{
+  "name": "h5x-blockchain",
+  "version": "1.0.0",
+  "description": "Smart contracts and blockchain integration for H5X obfuscation engine",
+  "main": "truffle-config.js",
+  "scripts": {
+    "compile": "truffle compile",
+    "migrate": "truffle migrate",
+    "test": "truffle test",
+    "develop": "truffle develop",
+    "console": "truffle console",
+    "ganache": "ganache-cli -p 8545 -i 1337 --deterministic --accounts 10 --hardfork istanbul --gasLimit 10000000",
+    "deploy:development": "truffle migrate --network development",
+    "deploy:ganache": "truffle migrate --network ganache",
+    "deploy:test": "truffle migrate --network test",
+    "verify": "truffle run verify H5XHashStorage --network mainnet"
+  },
+  "keywords": [
+    "blockchain",
+    "ethereum",
+    "smart-contracts",
+    "obfuscation",
+    "security",
+    "h5x"
+  ],
+  "author": "H5X Development Team",
+  "license": "MIT",
+  "dependencies": {
+    "@truffle/hdwallet-provider": "^2.1.15"
+  },
+  "devDependencies": {
+    "@truffle/contract": "^4.6.31",
+    "truffle": "^5.11.5",
+    "truffle-plugin-verify": "^0.6.7",
+    "ganache-cli": "^6.12.2",
+    "web3": "^1.10.4"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/h5x-dev/H5X-Complete-Implementation-Final.git"
+  },
+  "bugs": {
+    "url": "https://github.com/h5x-dev/H5X-Complete-Implementation-Final/issues"
+  },
+  "homepage": "https://github.com/h5x-dev/H5X-Complete-Implementation-Final#readme"
+}

@@ -9,6 +9,9 @@ namespace h5x {
 class ControlFlowFlatteningPass : public llvm::PassInfoMixin<ControlFlowFlatteningPass> {
 public:
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+    
+private:
+    bool flattenFunction(llvm::Function &F);
 };
 
 } // namespace h5x

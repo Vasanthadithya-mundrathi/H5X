@@ -95,11 +95,20 @@ set(BLOCKCHAIN_SOURCES
     src/blockchain/BlockchainVerifier.cpp
 )
 
+set(PASSES_SOURCES
+    src/passes/InstructionSubstitution.cpp
+    src/passes/ControlFlowFlattening.cpp
+    src/passes/BogusControlFlow.cpp
+    src/passes/StringObfuscation.cpp
+    src/passes/AntiAnalysisPass.cpp
+)
+
 set(ALL_SOURCES
     ${CORE_SOURCES}
     ${UTILS_SOURCES}
     ${AI_SOURCES}
     ${BLOCKCHAIN_SOURCES}
+    ${PASSES_SOURCES}
 )
 
 # Create H5X core library
@@ -223,6 +232,8 @@ elseif(APPLE)
 endif()
 
 include(CPack)
+
+# Testing already enabled above
 
 # Print configuration summary
 message(STATUS "")

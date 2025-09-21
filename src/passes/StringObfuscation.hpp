@@ -9,6 +9,10 @@ namespace h5x {
 class StringObfuscationPass : public llvm::PassInfoMixin<StringObfuscationPass> {
 public:
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+
+private:
+    bool obfuscateString(llvm::GlobalVariable &GV, llvm::Module &M);
+    llvm::Function* createDecryptFunction(llvm::Module &M, uint8_t xorKey);
 };
 
 } // namespace h5x

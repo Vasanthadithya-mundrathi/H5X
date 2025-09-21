@@ -92,6 +92,11 @@ public:
     bool load_from_file(const std::string& config_path);
     ObfuscationConfig get_config() const { return config_; }
     bool validate_config() const;
+    
+    // Static utility methods for CLI
+    static ObfuscationConfig loadFromFile(const std::string& config_path);
+    static bool saveToFile(const ObfuscationConfig& config, const std::string& config_path);
+    static ObfuscationConfig getDefaultConfig();
 
 private:
     ObfuscationConfig config_;
