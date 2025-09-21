@@ -1,0 +1,30 @@
+H5X OBFUSCATION REPORT SUMMARY
+===============================
+
+Status: SUCCESS
+Input File: demos/financial_security_demo.cpp
+Output File: financial_monitored
+
+FILE METRICS:
+  Original Size: 11.7 KB
+  Obfuscated Size: 16.5 KB
+  Size Increase: 41.2%
+
+OBFUSCATION METRICS:
+  Complexity Factor: 15.00x
+  Security Score: 100.0/100
+  Functions Processed: 2
+  Strings Obfuscated: 0
+  Bogus Blocks Added: 0
+
+PERFORMANCE METRICS:
+  Compilation Time: 1.171000 s
+  Obfuscation Time: 8 ms
+  Estimated Overhead: 0.0%
+
+APPLIED TECHNIQUES:
+
+BLOCKCHAIN VERIFICATION:
+  Status: VERIFIED
+  Hash: 09316c76b5de583070df3c78cab276311d748258a8e890a49bed85bee1c504d2
+  Transaction: 0x4a3434363be570686432107d43a7c7b310524190f581e0516f23d3eacff3d6d5

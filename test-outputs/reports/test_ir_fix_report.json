@@ -1,0 +1,42 @@
+{
+  "ai_optimization" : 
+  {
+    "used" : false
+  },
+  "applied_techniques" : 
+  [
+    "Instruction Substitution",
+    "String Obfuscation"
+  ],
+  "blockchain_verification" : 
+  {
+    "integrity_hash" : "529b212194ee1f07c9c41c6b9881524f304511de4156e2d29c47cbf6289c586e",
+    "transaction_id" : "0xad61c64cd301ce51f6079f5c4f8df3e96b41379dd30e23f57a08d89653c279a7",
+    "verified" : true
+  },
+  "error_message" : "",
+  "file_metrics" : 
+  {
+    "obfuscated_size" : 40120,
+    "original_size" : 792
+  },
+  "input_file_path" : "demos/test_program.cpp",
+  "obfuscation_metrics" : 
+  {
+    "anti_analysis_features_added" : 0,
+    "bogus_blocks_added" : 0,
+    "complexity_increase_factor" : 1.0389048991354466,
+    "control_flow_modifications" : 0,
+    "functions_obfuscated" : 50,
+    "security_score" : 70.778097982708928,
+    "strings_obfuscated" : 9
+  },
+  "output_file_path" : "test_ir_fix",
+  "performance_metrics" : 
+  {
+    "compilation_time_ms" : 981,
+    "estimated_runtime_overhead" : 0.0,
+    "obfuscation_time_ms" : 1
+  },
+  "success" : true
+}

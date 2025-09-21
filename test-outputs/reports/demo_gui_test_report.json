@@ -1,0 +1,40 @@
+{
+  "ai_optimization" : 
+  {
+    "used" : false
+  },
+  "applied_techniques" : 
+  [
+    "Instruction Substitution",
+    "String Obfuscation"
+  ],
+  "blockchain_verification" : 
+  {
+    "verified" : false
+  },
+  "error_message" : "",
+  "file_metrics" : 
+  {
+    "obfuscated_size" : 69488,
+    "original_size" : 5650
+  },
+  "input_file_path" : "demos/demo_program.cpp",
+  "obfuscation_metrics" : 
+  {
+    "anti_analysis_features_added" : 0,
+    "bogus_blocks_added" : 0,
+    "complexity_increase_factor" : 1.0355268469923293,
+    "control_flow_modifications" : 0,
+    "functions_obfuscated" : 170,
+    "security_score" : 70.710536939846591,
+    "strings_obfuscated" : 45
+  },
+  "output_file_path" : "demo_gui_test",
+  "performance_metrics" : 
+  {
+    "compilation_time_ms" : 3470,
+    "estimated_runtime_overhead" : 0.0,
+    "obfuscation_time_ms" : 2162
+  },
+  "success" : true
+}

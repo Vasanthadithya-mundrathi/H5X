@@ -1,0 +1,38 @@
+{
+  "ai_optimization" : 
+  {
+    "used" : false
+  },
+  "applied_techniques" : [],
+  "blockchain_verification" : 
+  {
+    "integrity_hash" : "09316c76b5de583070df3c78cab276311d748258a8e890a49bed85bee1c504d2",
+    "transaction_id" : "0x4a3434363be570686432107d43a7c7b310524190f581e0516f23d3eacff3d6d5",
+    "verified" : true
+  },
+  "error_message" : "",
+  "file_metrics" : 
+  {
+    "obfuscated_size" : 16848,
+    "original_size" : 11936
+  },
+  "input_file_path" : "demos/financial_security_demo.cpp",
+  "obfuscation_metrics" : 
+  {
+    "anti_analysis_features_added" : 0,
+    "bogus_blocks_added" : 0,
+    "complexity_increase_factor" : 15.0,
+    "control_flow_modifications" : 0,
+    "functions_obfuscated" : 2,
+    "security_score" : 100.0,
+    "strings_obfuscated" : 0
+  },
+  "output_file_path" : "financial_monitored",
+  "performance_metrics" : 
+  {
+    "compilation_time_ms" : 1171,
+    "estimated_runtime_overhead" : 0.0,
+    "obfuscation_time_ms" : 8
+  },
+  "success" : true
+}

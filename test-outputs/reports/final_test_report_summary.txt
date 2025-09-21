@@ -1,0 +1,25 @@
+H5X OBFUSCATION REPORT SUMMARY
+===============================
+
+Status: SUCCESS
+Input File: demos/comprehensive_demo.cpp
+Output File: final_test
+
+FILE METRICS:
+  Original Size: 12.0 KB
+  Obfuscated Size: 16.4 KB
+  Size Increase: 37.4%
+
+OBFUSCATION METRICS:
+  Complexity Factor: 15.00x
+  Security Score: 100.0/100
+  Functions Processed: 2
+  Strings Obfuscated: 0
+  Bogus Blocks Added: 0
+
+PERFORMANCE METRICS:
+  Compilation Time: 686 ms
+  Obfuscation Time: 6 ms
+  Estimated Overhead: 0.0%
+
+APPLIED TECHNIQUES:

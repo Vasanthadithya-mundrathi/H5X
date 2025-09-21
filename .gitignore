@@ -167,4 +167,4 @@ perf.data*
 
 # Static analysis
 cppcheck.xml
-scan-build/
+scan-build/test-outputs/
