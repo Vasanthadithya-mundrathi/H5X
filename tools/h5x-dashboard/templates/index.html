@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H5X Obfuscation Engine - Web Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <h1 class="logo">
+                        <i class="fas fa-shield-alt"></i>
+                        H5X
+                    </h1>
+                    <span class="tagline">Advanced Code Obfuscation Engine</span>
+                </div>
+                <div class="status-indicators">
+                    <div class="status-item" id="cli-status">
+                        <i class="fas fa-terminal"></i>
+                        <span>CLI: <span id="cli-status-text">Checking...</span></span>
+                    </div>
+                    <div class="status-item" id="blockchain-status">
+                        <i class="fas fa-link"></i>
+                        <span>Blockchain: <span id="blockchain-status-text">Checking...</span></span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- System Status Cards -->
+            <div class="status-cards">
+                <div class="card system-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-cogs"></i> System Status</h3>
+                        <div class="refresh-btn" onclick="refreshSystemStatus()">
+                            <i class="fas fa-sync-alt"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="status-grid">
+                            <div class="status-row">
+                                <span class="status-label">Engine Status:</span>
+                                <span class="status-value" id="engine-status">
+                                    <i class="fas fa-spinner fa-spin"></i> Checking...
+                                </span>
+                            </div>
+                            <div class="status-row">
+                                <span class="status-label">Version:</span>
+                                <span class="status-value" id="engine-version">Loading...</span>
+                            </div>
+                            <div class="status-row">
+                                <span class="status-label">Configuration:</span>
+                                <span class="status-value" id="config-status">
+                                    <i class="fas fa-spinner fa-spin"></i> Checking...
+                                </span>
+                            </div>
+                            <div class="status-row">
+                                <span class="status-label">Blockchain:</span>
+                                <span class="status-value" id="blockchain-connection">
+                                    <i class="fas fa-spinner fa-spin"></i> Checking...
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card actions-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="showUploadModal()">
+                                <i class="fas fa-upload"></i> Upload & Obfuscate
+                            </button>
+                            <button class="btn btn-secondary" onclick="showRecentFiles()">
+                                <i class="fas fa-history"></i> Recent Files
+                            </button>
+                            <button class="btn btn-info" onclick="showDemo()">
+                                <i class="fas fa-play"></i> Run Demo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Obfuscation Interface -->
+            <div class="card obfuscation-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-shield-alt"></i> Code Obfuscation Interface</h3>
+                </div>
+                <div class="card-content">
+                    <div class="obfuscation-controls">
+                        <!-- File Upload Section -->
+                        <div class="upload-section">
+                            <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Click to select C/C++ source files or drag & drop</p>
+                                <small>Supported: .cpp, .c, .cc, .cxx, .h, .hpp, .hxx</small>
+                            </div>
+                            <input type="file" id="file-input" accept=".cpp,.c,.cc,.cxx,.h,.hpp,.hxx" multiple style="display: none;">
+                            <div class="uploaded-files" id="uploaded-files"></div>
+                        </div>
+
+                        <!-- Configuration Section -->
+                        <div class="config-section">
+                            <div class="config-row">
+                                <label for="obfuscation-level">Obfuscation Level:</label>
+                                <select id="obfuscation-level">
+                                    <option value="1">Level 1 - Basic</option>
+                                    <option value="2">Level 2 - Standard</option>
+                                    <option value="3" selected>Level 3 - Advanced</option>
+                                    <option value="4">Level 4 - Strong</option>
+                                    <option value="5">Level 5 - Maximum</option>
+                                </select>
+                            </div>
+                            <div class="config-row">
+                                <label for="output-name">Output Name:</label>
+                                <input type="text" id="output-name" placeholder="obfuscated_output" value="obfuscated_output">
+                            </div>
+                            <div class="config-row">
+                                <label>
+                                    <input type="checkbox" id="blockchain-verification" checked>
+                                    Enable Blockchain Verification
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-section">
+                            <button class="btn btn-primary btn-large" id="start-obfuscation" onclick="startObfuscation()" disabled>
+                                <i class="fas fa-shield-alt"></i> Start Obfuscation
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearFiles()">
+                                <i class="fas fa-trash"></i> Clear Files
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Progress Section -->
+                    <div class="progress-section" id="progress-section" style="display: none;">
+                        <div class="progress-header">
+                            <h4>Obfuscation in Progress...</h4>
+                            <span class="progress-status" id="progress-status">Initializing...</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <div class="progress-details" id="progress-details">
+                            Starting obfuscation process...
+                        </div>
+                    </div>
+
+                    <!-- Results Section -->
+                    <div class="results-section" id="results-section" style="display: none;">
+                        <div class="results-header">
+                            <h4><i class="fas fa-chart-line"></i> Obfuscation Results</h4>
+                        </div>
+                        <div class="results-content" id="results-content">
+                            <!-- Results will be populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Files Section -->
+            <div class="card files-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-folder-open"></i> Recent Obfuscated Files</h3>
+                    <button class="btn btn-small" onclick="refreshRecentFiles()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="card-content">
+                    <div class="files-list" id="recent-files-list">
+                        <div class="loading-placeholder">
+                            <i class="fas fa-spinner fa-spin"></i> Loading recent files...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>&copy; 2025 H5X Obfuscation Engine. Advanced multi-layer code protection system.</p>
+                <div class="footer-links">
+                    <a href="#" onclick="showAbout()">About</a>
+                    <a href="#" onclick="showHelp()">Help</a>
+                    <a href="https://github.com" target="_blank">GitHub</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="upload-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Upload Files for Obfuscation</h3>
+                <span class="close" onclick="closeModal('upload-modal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Select C/C++ source files to upload and obfuscate:</p>
+                <input type="file" id="modal-file-input" accept=".cpp,.c,.cc,.cxx,.h,.hpp,.hxx" multiple>
+                <div class="modal-files" id="modal-uploaded-files"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('upload-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="uploadFiles()">Upload & Configure</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="demo-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>H5X Demo</h3>
+                <span class="close" onclick="closeModal('demo-modal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Run the H5X demonstration with the judge demo file:</p>
+                <div class="demo-options">
+                    <button class="btn btn-primary" onclick="runDemo()">
+                        <i class="fas fa-play"></i> Run Judge Demo
+                    </button>
+                </div>
+                <div class="demo-output" id="demo-output" style="display: none;">
+                    <h4>Demo Output:</h4>
+                    <pre id="demo-console"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('demo-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

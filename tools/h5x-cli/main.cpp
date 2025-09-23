@@ -67,7 +67,7 @@ void print_version() {
     std::cout << "H5X CLI Tool\n";
     std::cout << "Version: " << CLI_VERSION << "\n";
     std::cout << "Build Date: " << CLI_BUILD_DATE << "\n";
-    std::cout << "Engine Version: " << H5XObfuscationEngine::get_version() << "\n";
+    std::cout << "Engine Version: 1.0.0\n";
     std::cout << "\n";
     std::cout << "Features:\n";
     std::cout << "  ✓ LLVM-based obfuscation\n";
@@ -204,7 +204,10 @@ int cmd_obfuscate(const CLIArgs& args) {
         config.generate_detailed_report = args.generate_report;
         config.target_platforms = args.targets.empty() ? std::vector<std::string>{"linux"} : args.targets;
 
-        engine.configure(config);
+        engine.setConfig(config);
+        engine.enableAIOptimization(args.ai_optimize);
+        engine.enableBlockchainVerification(args.blockchain_verify);
+        engine.enableReportGeneration(args.generate_report);
 
         if (!args.quiet) {
             std::cout << "⚙️  Configuration:";
@@ -227,7 +230,7 @@ int cmd_obfuscate(const CLIArgs& args) {
         // Start obfuscation
         auto start_time = std::chrono::high_resolution_clock::now();
 
-        auto result = engine.obfuscate_file(args.input_file, args.output_file);
+        bool success = engine.obfuscateFile(args.input_file, args.output_file, args.level);
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -236,61 +239,54 @@ int cmd_obfuscate(const CLIArgs& args) {
             print_progress_bar("Processing", 1.0);
         }
 
-        if (!result.success) {
-            std::cerr << "❌ Obfuscation failed: " << result.error_message << "\n";
+        if (!success) {
+            std::cerr << "❌ Obfuscation failed: " << engine.getLastError() << "\n";
             return 1;
         }
+
+        // Get the report
+        auto report = engine.getLastReport();
 
         // Print results
         std::cout << "\n🎉 Obfuscation completed successfully!\n";
         std::cout << "\n📊 OBFUSCATION RESULTS:\n";
-        std::cout << "  Input File:         " << result.input_file_path << "\n";
-        std::cout << "  Output File:        " << result.output_file_path << "\n";
-        std::cout << "  Original Size:      " << result.original_file_size << " bytes\n";
-        std::cout << "  Obfuscated Size:    " << result.obfuscated_file_size << " bytes\n";
+        std::cout << "  Input File:         " << report.inputFile << "\n";
+        std::cout << "  Output File:        " << report.outputFile << "\n";
+        std::cout << "  Original Size:      " << report.originalSize << " bytes\n";
+        std::cout << "  Obfuscated Size:    " << report.obfuscatedSize << " bytes\n";
 
-        double size_increase = ((double)result.obfuscated_file_size / result.original_file_size - 1.0) * 100;
+        double size_increase = report.sizeIncrease * 100;
         std::cout << "  Size Increase:      " << std::fixed << std::setprecision(1) << size_increase << "%\n";
-        std::cout << "  Complexity Factor:  " << std::setprecision(2) << result.complexity_increase_factor << "x\n";
-        std::cout << "  Security Score:     " << std::setprecision(1) << result.security_score << "/100\n";
-        std::cout << "  Processing Time:    " << duration.count() << "ms\n";
+        std::cout << "  Security Score:     " << std::setprecision(1) << report.securityScore << "/100\n";
+        std::cout << "  Processing Time:    " << std::setprecision(2) << report.processingTime << "s\n";
 
         std::cout << "\n🛡️  APPLIED TECHNIQUES:\n";
-        for (const auto& technique : result.applied_techniques) {
+        for (const auto& technique : report.passesApplied) {
             std::cout << "  ✓ " << technique << "\n";
         }
 
         std::cout << "\n📈 PROTECTION METRICS:\n";
-        std::cout << "  Functions Processed: " << result.functions_obfuscated << "\n";
-        std::cout << "  Strings Obfuscated:  " << result.strings_obfuscated << "\n";
-        std::cout << "  Bogus Blocks Added:  " << result.bogus_blocks_added << "\n";
+        std::cout << "  Functions Processed: " << report.functionsProcessed << "\n";
+        std::cout << "  Strings Obfuscated:  " << report.stringsObfuscated << "\n";
+        std::cout << "  Instructions Modified: " << report.instructionsModified << "\n";
 
-        if (result.ai_optimization_used) {
+        if (report.aiOptimizationUsed) {
             std::cout << "\n🧠 AI OPTIMIZATION:\n";
             std::cout << "  Genetic Algorithm:   ENABLED\n";
-            std::cout << "  Fitness Score:       " << std::setprecision(2) << result.fitness_score << "\n";
-            std::cout << "  Optimal Sequence:    ";
-            for (size_t i = 0; i < result.optimal_pass_sequence.size() && i < 5; ++i) {
-                std::cout << result.optimal_pass_sequence[i] << " ";
-            }
-            std::cout << "\n";
+            std::cout << "  Fitness Score:       " << std::setprecision(2) << report.fitnessScore << "\n";
+            std::cout << "  Generations:         " << report.generations << "\n";
         }
 
-        if (result.blockchain_verified) {
+        if (report.blockchainVerificationUsed) {
             std::cout << "\n⛓️  BLOCKCHAIN VERIFICATION:\n";
             std::cout << "  Status:             VERIFIED\n";
-            std::cout << "  Integrity Hash:     " << result.integrity_hash.substr(0, 16) << "...\n";
-            std::cout << "  Transaction ID:     " << result.blockchain_transaction_id.substr(0, 16) << "...\n";
+            std::cout << "  Transaction Hash:   " << report.transactionHash.substr(0, 16) << "...\n";
+            std::cout << "  Block Hash:         " << report.blockHash.substr(0, 16) << "...\n";
         }
 
         if (args.generate_report) {
-            std::string report_path = args.output_file + "_report";
-            if (engine.generate_report(result, report_path)) {
-                std::cout << "\n📋 DETAILED REPORT:\n";
-                std::cout << "  Report generated:   " << report_path << ".json\n";
-                std::cout << "  HTML version:       " << report_path << ".html\n";
-                std::cout << "  Summary:            " << report_path << "_summary.txt\n";
-            }
+            std::cout << "\n📋 DETAILED REPORT:\n";
+            std::cout << "  Report available:   " << args.output_file << ".report.{html,json}\n";
         }
 
         std::cout << "\n🎯 Ready for deployment! Your code is now protected.\n\n";
@@ -328,14 +324,18 @@ int cmd_analyze(const CLIArgs& args) {
             return 1;
         }
 
-        auto analysis_result = engine.analyze_obfuscation_effectiveness(args.input_file);
+        bool analysis_success = engine.analyze(args.input_file);
 
         if (!args.quiet) {
             print_progress_bar("Analysis", 1.0);
         }
 
         std::cout << "\n📊 SECURITY ANALYSIS RESULTS:\n";
-        std::cout << analysis_result << "\n";
+        if (analysis_success) {
+            std::cout << "Analysis completed successfully\n";
+        } else {
+            std::cout << "Analysis failed: " << engine.getLastError() << "\n";
+        }
 
         return 0;
 
@@ -364,10 +364,14 @@ int cmd_verify(const CLIArgs& args) {
             return 1;
         }
 
-        auto verification_result = engine.verify_blockchain_integrity(args.input_file);
+        bool verification_success = engine.verify(args.input_file);
 
         std::cout << "\n🔐 BLOCKCHAIN VERIFICATION:\n";
-        std::cout << verification_result << "\n";
+        if (verification_success) {
+            std::cout << "Verification completed successfully\n";
+        } else {
+            std::cout << "Verification failed: " << engine.getLastError() << "\n";
+        }
 
         return 0;
 
@@ -416,25 +420,33 @@ int cmd_batch(const CLIArgs& args) {
         config.enable_ai_optimization = args.ai_optimize;
         config.enable_blockchain_verification = args.blockchain_verify;
         config.target_platforms = args.targets.empty() ? std::vector<std::string>{"linux"} : args.targets;
-        engine.configure(config);
+        engine.setConfig(config);
+        engine.enableAIOptimization(args.ai_optimize);
+        engine.enableBlockchainVerification(args.blockchain_verify);
 
         std::cout << "🚀 Starting batch obfuscation...\n";
 
-        auto results = engine.obfuscate_batch(input_files, args.output_file);
+        // For now, just process files one by one (batch not implemented yet)
+        std::vector<bool> results;
+        for (const auto& file : input_files) {
+            std::string output_name = args.output_file + "/" + std::filesystem::path(file).filename().string() + "_obf";
+            bool success = engine.obfuscateFile(file, output_name, args.level);
+            results.push_back(success);
+        }
 
         // Print summary
         int successful = 0;
         int failed = 0;
 
-        for (const auto& result : results) {
-            if (result.success) {
+        for (size_t i = 0; i < results.size(); ++i) {
+            if (results[i]) {
                 successful++;
                 if (args.verbose) {
-                    std::cout << "✅ " << result.input_file_path << " -> " << result.output_file_path << "\n";
+                    std::cout << "✅ " << input_files[i] << " -> obfuscated\n";
                 }
             } else {
                 failed++;
-                std::cerr << "❌ " << result.input_file_path << ": " << result.error_message << "\n";
+                std::cerr << "❌ " << input_files[i] << ": " << engine.getLastError() << "\n";
             }
         }
 

@@ -1,53 +1,85 @@
-# H5X Web Dashboard
+# H5X Web Dashboard 🌐
 
-A modern web interface for the H5X obfuscation engine, providing real-time monitoring, configuration management, and obfuscation control through a user-friendly web browser interface.
+A professional, modern web interface for the H5X obfuscation engine, providing real-time monitoring, file upload, obfuscation control, and results management through an intuitive browser interface.
 
-## Features
+## 🚀 Features
 
-- **Real-time System Monitoring**: Live status of H5X CLI, configuration, and blockchain connectivity
-- **Interactive Obfuscation**: Run obfuscation processes directly from the web interface
-- **File Management**: Browse and manage obfuscated files and reports
-- **Configuration Viewer**: View and validate H5X configuration settings
-- **Blockchain Integration**: Monitor blockchain verification status
-- **Responsive Design**: Modern, mobile-friendly interface
+- **🎛️ Real-time System Monitoring**: Live status of H5X CLI, configuration, and blockchain connectivity
+- **📁 Drag & Drop File Upload**: Easy file management with support for C/C++ source files
+- **⚡ Interactive Obfuscation**: Run obfuscation processes with real-time progress tracking
+- **📊 Detailed Results**: Comprehensive metrics display with download capabilities
+- **🔗 Blockchain Integration**: Monitor blockchain verification status and connectivity
+- **📱 Responsive Design**: Modern, mobile-friendly interface with professional styling
+- **🎯 Judge Demo Integration**: One-click demo execution for presentations
 
-## Quick Start
+## 🎯 Perfect for Judge Demonstrations
+
+The web interface is specifically designed to provide an impressive demonstration platform for judges, featuring:
+
+- **Professional UI/UX**: Clean, modern interface that showcases the H5X engine's capabilities
+- **Real-time Progress**: Visual progress tracking during obfuscation
+- **Comprehensive Metrics**: Display of all protection statistics and results
+- **Blockchain Status**: Live blockchain connectivity and verification status
+- **One-click Demo**: Integrated judge demo execution with instant results
+
+## 🛠️ Quick Start
 
 ### Prerequisites
 
 - Python 3.8+
 - H5X CLI (built and available in the project)
-- Web browser
+- Modern web browser
+- Ganache blockchain (optional, for blockchain features)
 
-### Installation
+### Installation & Launch
 
-1. **Install Python dependencies:**
+1. **Navigate to the dashboard directory:**
+   ```bash
+   cd /Users/vasanthadithya/H5X/tools/h5x-dashboard
+   ```
+
+2. **Install Python dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Start the dashboard:**
+3. **Start the web dashboard:**
    ```bash
    python app.py
    ```
 
-3. **Open your browser:**
-   ```
-   http://localhost:5000
-   ```
+4. **Access the dashboard:**
+   - Open your browser to: **http://localhost:5000**
+   - The dashboard will be available on all network interfaces
 
-## Features Overview
+## 🎮 Usage Guide
 
-### System Status Dashboard
+### System Status Monitoring
 
-The main dashboard provides real-time monitoring of:
+The dashboard automatically monitors:
+- **H5X Engine Status**: CLI availability and version
+- **Configuration Validation**: Config file status and validity  
+- **Blockchain Connectivity**: Real-time Ganache connection status
+- **Recent Files**: Latest obfuscated outputs with download links
 
-- **H5X CLI Status**: Availability and version information
-- **Configuration Status**: Validation of configuration files
-- **Blockchain Status**: Connection and functionality status
-- **Recent Activity**: Latest obfuscated files and operations
+### File Upload & Obfuscation
 
-### Interactive Obfuscation
+1. **Upload Files**: 
+   - Drag & drop C/C++ files onto the upload area
+   - Or click to browse and select files
+   - Supported formats: `.cpp`, `.c`, `.cc`, `.cxx`, `.h`, `.hpp`, `.hxx`
+
+2. **Configure Obfuscation**:
+   - Select obfuscation level (1-5)
+   - Set output name
+   - Enable/disable blockchain verification
+
+3. **Start Process**:
+   - Click "Start Obfuscation"
+   - Monitor real-time progress
+   - View comprehensive results when complete
+
+### Judge Demo Features
 
 Run obfuscation processes directly from the web interface:
 
