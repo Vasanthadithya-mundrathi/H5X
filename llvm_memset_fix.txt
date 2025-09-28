@@ -1,0 +1,7 @@
+// Fix: Remove unsupported attributes from llvm.memset declaration
+std::regex llvmMemsetRe(R"(declare void @llvm\.memset\.p0\.i64\(ptr writeonly, i8, i64, i1 false\) #\d+)");
+replaced = std::regex_replace(content, llvmMemsetRe, "declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)");
+if (replaced != content) {
+    changed = true;
+    content.swap(replaced);
+}

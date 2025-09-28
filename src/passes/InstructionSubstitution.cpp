@@ -1,4 +1,21 @@
 #include "InstructionSubstitution.hpp"
+
+#ifdef USE_MOCK_LLVM
+// Mock implementation when LLVM is not available
+#include <iostream>
+
+namespace h5x {
+
+bool InstructionSubstitutionPass::run() {
+    std::cout << "[MOCK] InstructionSubstitution pass running (mock mode)" << std::endl;
+    return true;
+}
+
+} // namespace h5x
+
+#else
+// Real LLVM implementation when available
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Function.h"
@@ -13,17 +30,23 @@ namespace h5x {
 
 PreservedAnalyses InstructionSubstitutionPass::run(Module &M, ModuleAnalysisManager &AM) {
     bool modified = false;
+    int totalInstructions = 0;
+    int replacedInstructions = 0;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 3);
-    
+
+    llvm::errs() << "[DEBUG] InstructionSubstitution pass starting...\n";
+
     for (Function &F : M) {
         if (F.isDeclaration() || F.getName().starts_with("__")) {
             continue; // Skip external and system functions
         }
-        
+
+        llvm::errs() << "[DEBUG] Processing function: " << F.getName().str() << "\n";
+
         std::vector<Instruction*> toReplace;
-        
+
         // Collect instructions to replace
         for (BasicBlock &BB : F) {
             for (Instruction &I : BB) {
@@ -33,21 +56,24 @@ PreservedAnalyses InstructionSubstitutionPass::run(Module &M, ModuleAnalysisMana
                         BO->getOpcode() == Instruction::Sub ||
                         BO->getOpcode() == Instruction::Mul) {
                         toReplace.push_back(&I);
+                        totalInstructions++;
                     }
                 }
             }
         }
-        
+
+        llvm::errs() << "[DEBUG] Found " << toReplace.size() << " instructions to replace in function " << F.getName().str() << "\n";
+
         // Apply substitutions
         IRBuilder<> Builder(M.getContext());
         for (Instruction *I : toReplace) {
             Builder.SetInsertPoint(I);
             Value *replacement = nullptr;
-            
+
             if (auto *BO = dyn_cast<BinaryOperator>(I)) {
                 Value *LHS = BO->getOperand(0);
                 Value *RHS = BO->getOperand(1);
-                
+
                 switch (BO->getOpcode()) {
                 case Instruction::Add:
                     // Replace: a + b with: (a ^ b) + 2 * (a & b)
@@ -57,9 +83,10 @@ PreservedAnalyses InstructionSubstitutionPass::run(Module &M, ModuleAnalysisMana
                         Value *AndVal = Builder.CreateAnd(LHS, RHS, "sub_and");
                         Value *TwoAndVal = Builder.CreateShl(AndVal, 1, "sub_2and"); // Multiply by 2
                         replacement = Builder.CreateAdd(XorVal, TwoAndVal, "sub_add");
+                        llvm::errs() << "[DEBUG] Replaced Add instruction\n";
                     }
                     break;
-                    
+
                 case Instruction::Sub:
                     // Replace: a - b with: (a ^ b) - 2 * (~a & b)
                     {
@@ -68,9 +95,10 @@ PreservedAnalyses InstructionSubstitutionPass::run(Module &M, ModuleAnalysisMana
                         Value *AndVal = Builder.CreateAnd(NotA, RHS, "sub_and");
                         Value *TwoAndVal = Builder.CreateShl(AndVal, 1, "sub_2and");
                         replacement = Builder.CreateSub(XorVal, TwoAndVal, "sub_sub");
+                        llvm::errs() << "[DEBUG] Replaced Sub instruction\n";
                     }
                     break;
-                    
+
                 case Instruction::Mul:
                     // Replace simple multiplications with shifts when possible
                     if (auto *CI = dyn_cast<ConstantInt>(RHS)) {
@@ -84,31 +112,25 @@ PreservedAnalyses InstructionSubstitutionPass::run(Module &M, ModuleAnalysisMana
                             }
                             if (shiftAmount < 32) { // Reasonable shift amount
                                 replacement = Builder.CreateShl(LHS, shiftAmount, "sub_shift");
+                                llvm::errs() << "[DEBUG] Replaced Mul with shift (power of 2)\n";
                             }
                         }
                     }
-                    // If not power of 2, apply complex multiplication
-                    if (!replacement) {
-                        // Use bit manipulation: a * b = ((a << 1) + (a << 2) + ...) optimized
-                        // For simplicity, we'll use a different approach for non-power-of-2
-                        Value *temp1 = Builder.CreateAdd(LHS, LHS, "sub_temp1");
-                        Value *temp2 = Builder.CreateMul(temp1, RHS, "sub_temp2");
-                        Value *temp3 = Builder.CreateSDiv(temp2, ConstantInt::get(LHS->getType(), 2), "sub_temp3");
-                        replacement = temp3;
-                    }
+                    // Skip non-power-of-2 multiplications to avoid incorrect transformations
                     break;
-                    
+
                 default:
                     continue; // Skip unsupported operations
                 }
             }
-            
+
             if (replacement) {
                 I->replaceAllUsesWith(replacement);
                 modified = true;
+                replacedInstructions++;
             }
         }
-        
+
         // Clean up replaced instructions
         for (Instruction *I : toReplace) {
             if (I->use_empty()) {
@@ -116,8 +138,11 @@ PreservedAnalyses InstructionSubstitutionPass::run(Module &M, ModuleAnalysisMana
             }
         }
     }
-    
+
+    llvm::errs() << "[DEBUG] InstructionSubstitution pass completed. Total instructions found: " << totalInstructions << ", replaced: " << replacedInstructions << ", modified: " << modified << "\n";
+
     return modified ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
 } // namespace h5x
+#endif

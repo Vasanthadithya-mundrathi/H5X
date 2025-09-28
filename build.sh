@@ -95,6 +95,7 @@ detect_llvm() {
     LLVM_VERSIONS=("18" "17" "16" "15" "14")
     LLVM_FOUND=0
 
+    # First, try to find llvm-config in PATH
     for version in "${LLVM_VERSIONS[@]}"; do
         if command -v "llvm-config-$version" >/dev/null 2>&1; then
             LLVM_VERSION=$version
@@ -109,6 +110,16 @@ detect_llvm() {
         fi
     done
 
+    # If not found in PATH, try Homebrew location
+    if [ $LLVM_FOUND -eq 0 ]; then
+        if [ -f "/opt/homebrew/opt/llvm/bin/llvm-config" ]; then
+            LLVM_CONFIG="/opt/homebrew/opt/llvm/bin/llvm-config"
+            LLVM_VERSION=$($LLVM_CONFIG --version | cut -d. -f1)
+            LLVM_FOUND=1
+            print_success "Found LLVM $LLVM_VERSION in Homebrew at /opt/homebrew/opt/llvm"
+        fi
+    fi
+
     if [ $LLVM_FOUND -eq 1 ]; then
         LLVM_PREFIX=$($LLVM_CONFIG --prefix)
         print_success "Found LLVM $LLVM_VERSION at $LLVM_PREFIX"
@@ -118,6 +129,7 @@ detect_llvm() {
         print_warning "For full functionality, install LLVM development packages:"
         echo "  Ubuntu/Debian: sudo apt install llvm-17-dev clang-17"
         echo "  CentOS/RHEL:   sudo yum install llvm-devel clang-devel"
+        echo "  macOS:         brew install llvm"
     fi
 }
 

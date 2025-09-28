@@ -28,7 +28,7 @@ app.config['UPLOAD_FOLDER'] = str(PROJECT_ROOT / 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Configuration
-H5X_CLI_PATH = PROJECT_ROOT / "build" / "h5x-cli"
+H5X_CLI_PATH = PROJECT_ROOT / "h5x-cli"
 CONFIG_PATH = PROJECT_ROOT / "config" / "config.json"
 OUTPUT_PATH = PROJECT_ROOT / "output"
 LOGS_PATH = PROJECT_ROOT / "logs"
@@ -55,10 +55,10 @@ class H5XDashboard:
         """Get H5X system status"""
         try:
             # Check if H5X CLI is available
-            result = subprocess.run([self.h5x_cli, "--version"], 
+            result = subprocess.run([self.h5x_cli, "version"],
                                   capture_output=True, text=True, timeout=10)
             cli_available = result.returncode == 0
-            cli_version = "H5X Engine v1.0.0" if cli_available else "Not available"
+            cli_version = result.stdout.strip() if cli_available else "Not available"
             
             # Check configuration
             config_exists = CONFIG_PATH.exists()
@@ -116,21 +116,29 @@ class H5XDashboard:
     def run_obfuscation(self, input_file, output_name, level, task_id):
         """Run obfuscation process in background"""
         try:
+            print(f"[DEBUG] Starting obfuscation: input={input_file}, output={output_name}, level={level}")
+            print(f"[DEBUG] CLI path: {self.h5x_cli}")
+            print(f"[DEBUG] CWD: {PROJECT_ROOT}")
+
             active_tasks[task_id] = {
                 'status': 'running',
                 'progress': 0,
                 'stage': 'Initializing...',
                 'start_time': datetime.now().isoformat()
             }
-            
+
             # Update progress
             active_tasks[task_id]['progress'] = 20
             active_tasks[task_id]['stage'] = 'Compiling to LLVM IR...'
             time.sleep(1)
-            
+
             # Run the obfuscation
             cmd = [self.h5x_cli, 'obfuscate', input_file, '-o', output_name, '--level', str(level)]
+            print(f"[DEBUG] Command: {cmd}")
             result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT))
+            print(f"[DEBUG] Return code: {result.returncode}")
+            print(f"[DEBUG] STDOUT: {result.stdout[:500]}...")
+            print(f"[DEBUG] STDERR: {result.stderr[:500]}...")
             
             active_tasks[task_id]['progress'] = 80
             active_tasks[task_id]['stage'] = 'Applying obfuscation passes...'
@@ -140,15 +148,30 @@ class H5XDashboard:
                 # Parse output for metrics
                 output_lines = result.stdout.split('\n')
                 metrics = self.parse_obfuscation_output(output_lines)
-                
+
+                # Move output file to obfuscated directory
+                output_src = PROJECT_ROOT / output_name
+                output_dst = OUTPUT_PATH / "obfuscated" / output_name
+                try:
+                    if output_src.exists():
+                        output_dst.parent.mkdir(exist_ok=True)
+                        import shutil
+                        shutil.move(str(output_src), str(output_dst))
+                        final_output = str(output_dst)
+                    else:
+                        final_output = output_name
+                except Exception as e:
+                    print(f"Warning: Could not move output file: {e}")
+                    final_output = output_name
+
                 active_tasks[task_id]['progress'] = 100
                 active_tasks[task_id]['stage'] = 'Completed successfully!'
                 active_tasks[task_id]['status'] = 'completed'
-                
+
                 task_results[task_id] = {
                     'success': True,
                     'metrics': metrics,
-                    'output_file': output_name,
+                    'output_file': final_output,
                     'stdout': result.stdout,
                     'stderr': result.stderr
                 }

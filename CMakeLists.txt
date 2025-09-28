@@ -15,29 +15,83 @@ endif()
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=native")
 
+# Add LLVM compile flags if available
+if(LLVM_CXXFLAGS)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${LLVM_CXXFLAGS}")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${LLVM_CXXFLAGS}")
+endif()
+
 # Find required packages
 find_package(PkgConfig REQUIRED)
 
-# Find LLVM (attempt multiple versions)
-find_package(LLVM REQUIRED CONFIG)
-if(LLVM_FOUND)
-    message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-    message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+# LLVM Configuration - Use llvm-config for proper linking
+set(LLVM_ROOT "/opt/homebrew/Cellar/llvm@18/18.1.8")
+set(LLVM_CONFIG "${LLVM_ROOT}/bin/llvm-config")
 
-    # Add LLVM definitions and include directories
-    add_definitions(${LLVM_DEFINITIONS})
+# Check if LLVM exists and get proper linking flags
+if(EXISTS "${LLVM_CONFIG}")
+    message(STATUS "Found LLVM at ${LLVM_ROOT}")
+
+    # Get LLVM include directories
+    execute_process(
+        COMMAND ${LLVM_CONFIG} --includedir
+        OUTPUT_VARIABLE LLVM_INCLUDE_DIRS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Get LLVM library directories
+    execute_process(
+        COMMAND ${LLVM_CONFIG} --libdir
+        OUTPUT_VARIABLE LLVM_LIBRARY_DIRS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Get required LLVM libraries for our use case
+    execute_process(
+        COMMAND ${LLVM_CONFIG} --libs core irreader bitwriter target aarch64codegen aarch64asmparser passes transformutils analysis support
+        OUTPUT_VARIABLE LLVM_LIBS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Get LLVM system libraries
+    execute_process(
+        COMMAND ${LLVM_CONFIG} --system-libs
+        OUTPUT_VARIABLE LLVM_SYSTEM_LIBS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Get LLVM compile flags
+    execute_process(
+        COMMAND ${LLVM_CONFIG} --cxxflags
+        OUTPUT_VARIABLE LLVM_CXXFLAGS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Clean up the library flags (remove -l prefix and separate)
+    string(REPLACE "-l" "" LLVM_LIBS "${LLVM_LIBS}")
+    string(REPLACE " " ";" LLVM_LIBS "${LLVM_LIBS}")
+
+    # Add full paths to LLVM libraries
+    set(LLVM_FULL_LIBS "")
+    foreach(lib ${LLVM_LIBS})
+        if(EXISTS "${LLVM_LIBRARY_DIRS}/lib${lib}.dylib")
+            list(APPEND LLVM_FULL_LIBS "${LLVM_LIBRARY_DIRS}/lib${lib}.dylib")
+        elseif(EXISTS "${LLVM_LIBRARY_DIRS}/lib${lib}.a")
+            list(APPEND LLVM_FULL_LIBS "${LLVM_LIBRARY_DIRS}/lib${lib}.a")
+        endif()
+    endforeach()
+
     include_directories(${LLVM_INCLUDE_DIRS})
 
-    # Find LLVM libraries
-    llvm_map_components_to_libnames(LLVM_LIBS
-        support core irreader bitwriter target
-        x86codegen x86asmparser x86info
-        aarch64codegen aarch64asmparser aarch64info
-        passes transformutils analysis
-    )
+    # Add LLVM compile definitions
+    add_definitions(-DHAVE_LLVM=1)
+
+    message(STATUS "LLVM includes: ${LLVM_INCLUDE_DIRS}")
+    message(STATUS "LLVM libraries: ${LLVM_FULL_LIBS}")
+    message(STATUS "LLVM system libs: ${LLVM_SYSTEM_LIBS}")
 else()
-    message(WARNING "LLVM not found, using mock implementation")
-    set(LLVM_LIBS "")
+    message(WARNING "LLVM config not found at ${LLVM_CONFIG}, using mock implementation")
+    set(LLVM_FULL_LIBS "")
     set(USE_MOCK_LLVM ON)
     add_definitions(-DUSE_MOCK_LLVM)
 endif()
@@ -76,6 +130,8 @@ include_directories(
 set(CORE_SOURCES
     src/core/H5XObfuscationEngine.cpp
     src/core/ObfuscationManager.cpp
+    src/core/ObfuscationReporter.cpp
+    src/core/ReportValidator.cpp
     src/core/ReportGenerator.cpp
     src/core/SecurityAnalyzer.cpp
     src/core/CrossPlatformBuilder.cpp
@@ -101,6 +157,7 @@ set(PASSES_SOURCES
     src/passes/BogusControlFlow.cpp
     src/passes/StringObfuscation.cpp
     src/passes/AntiAnalysisPass.cpp
+    src/passes/JunkCodeInsertion.cpp
 )
 
 set(ALL_SOURCES
@@ -116,7 +173,8 @@ add_library(h5x_core ${ALL_SOURCES})
 
 # Link libraries to core
 target_link_libraries(h5x_core
-    ${LLVM_LIBS}
+    ${LLVM_FULL_LIBS}
+    ${LLVM_SYSTEM_LIBS}
     OpenSSL::SSL
     OpenSSL::Crypto
     CURL::libcurl
@@ -144,59 +202,12 @@ if(JSONCPP_FOUND)
     target_include_directories(h5x-cli PRIVATE ${JSONCPP_INCLUDE_DIRS})
 endif()
 
-# Dashboard backend (Python Flask app - no compilation needed)
-# Copy Python files to build directory
-configure_file(
-    ${CMAKE_SOURCE_DIR}/tools/h5x-dashboard/app.py
-    ${CMAKE_BINARY_DIR}/bin/h5x-dashboard.py
-    COPYONLY
-)
-
 # Install targets
 install(TARGETS h5x_core h5x-cli
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
     PUBLIC_HEADER DESTINATION include/h5x
-)
-
-# Install headers
-install(DIRECTORY src/
-    DESTINATION include/h5x
-    FILES_MATCHING PATTERN "*.hpp"
-)
-
-# Install configuration files
-install(DIRECTORY config/
-    DESTINATION etc/h5x
-    FILES_MATCHING PATTERN "*.json"
-)
-
-# Install documentation
-install(DIRECTORY docs/
-    DESTINATION share/doc/h5x
-    FILES_MATCHING PATTERN "*.md" PATTERN "*.txt"
-)
-
-# Create package configuration
-include(CMakePackageConfigHelpers)
-
-configure_package_config_file(
-    "${CMAKE_SOURCE_DIR}/cmake/H5XConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/H5XConfig.cmake"
-    INSTALL_DESTINATION lib/cmake/H5X
-)
-
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/H5XConfigVersion.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
-
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/H5XConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/H5XConfigVersion.cmake"
-    DESTINATION lib/cmake/H5X
 )
 
 # Testing
@@ -206,34 +217,6 @@ enable_testing()
 if(EXISTS "${CMAKE_SOURCE_DIR}/tests")
     add_subdirectory(tests)
 endif()
-
-# CPack configuration for packaging
-set(CPACK_PACKAGE_NAME "H5X")
-set(CPACK_PACKAGE_VENDOR "H5X Project")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "H5X Advanced Multi-Layer Code Obfuscation Engine")
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
-set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
-
-# Platform-specific packaging
-if(UNIX AND NOT APPLE)
-    set(CPACK_GENERATOR "DEB;RPM;TGZ")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "H5X Project Team")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libssl-dev, llvm-17, clang-17")
-    set(CPACK_RPM_PACKAGE_REQUIRES "openssl-devel, llvm17, clang17")
-elseif(WIN32)
-    set(CPACK_GENERATOR "NSIS;ZIP")
-elseif(APPLE)
-    set(CPACK_GENERATOR "DragNDrop;TGZ")
-endif()
-
-include(CPack)
-
-# Testing already enabled above
 
 # Print configuration summary
 message(STATUS "")

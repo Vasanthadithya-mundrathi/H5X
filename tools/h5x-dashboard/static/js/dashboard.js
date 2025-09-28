@@ -174,31 +174,48 @@ class H5XDashboard {
             this.showNotification('Please select files to obfuscate.', 'error');
             return;
         }
-        
-        // For demo purposes, we'll use the judge_demo.cpp file
+
         const level = document.getElementById('obfuscation-level').value;
         const outputName = document.getElementById('output-name').value || 'obfuscated_output';
-        
+
         try {
             // Show progress section
             document.getElementById('progress-section').style.display = 'block';
             document.getElementById('results-section').style.display = 'none';
-            
-            // Start obfuscation with judge demo file
+
+            // Upload the first file
+            const file = this.uploadedFiles[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadResponse = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const uploadResult = await uploadResponse.json();
+
+            if (!uploadResult.success) {
+                this.showNotification(uploadResult.error, 'error');
+                document.getElementById('progress-section').style.display = 'none';
+                return;
+            }
+
+            // Start obfuscation with uploaded file
             const response = await fetch('/api/obfuscate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    input_file: 'judge_demo.cpp',
+                    input_file: uploadResult.filepath,
                     output_name: outputName + '_web',
                     level: parseInt(level)
                 })
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 this.currentTask = result.task_id;
                 this.startProgressTracking();

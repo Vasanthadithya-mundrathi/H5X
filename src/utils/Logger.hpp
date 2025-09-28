@@ -36,6 +36,11 @@ public:
 
     void setLevel(LogLevel level) { current_level_ = level; }
     void setConsoleOutput(bool enable) { console_output_ = enable; }
+    
+    // Additional methods needed by core components
+    void setContext(const std::string& context) { context_ = context; }
+    void success(const std::string& message) { log(LogLevel::INFO, "[SUCCESS] " + message); }
+    void setVerbose(bool verbose) { verbose_ = verbose; }
 
 public:
     Logger() = default;
@@ -51,6 +56,8 @@ private:
     LogLevel current_level_ = LogLevel::INFO;
     bool console_output_ = true;
     bool initialized_ = false;
+    std::string context_;
+    bool verbose_ = false;
 };
 
 } // namespace h5x

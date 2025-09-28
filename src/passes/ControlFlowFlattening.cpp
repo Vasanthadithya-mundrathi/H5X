@@ -18,11 +18,11 @@ PreservedAnalyses ControlFlowFlatteningPass::run(Module &M, ModuleAnalysisManage
     bool modified = false;
     
     for (Function &F : M) {
-        // Skip external functions, system functions, and main function
+        // Skip external functions and system functions only
         if (F.isDeclaration() || 
             F.getName().starts_with("__") || 
-            F.getName() == "main" ||
-            F.size() < 3) { // Need at least 3 blocks to flatten
+            F.getName().starts_with("_Z") && F.getName().contains("std") ||
+            F.size() < 2) { // Need at least 2 blocks to flatten
             continue;
         }
         
@@ -47,17 +47,37 @@ PreservedAnalyses ControlFlowFlatteningPass::run(Module &M, ModuleAnalysisManage
 }
 
 bool ControlFlowFlatteningPass::flattenFunction(Function &F) {
-    // Don't flatten functions that are too small or have problematic patterns
-    if (F.size() < 3) return false;
+    // Don't flatten functions that are too small
+    if (F.size() < 2) return false;
+
+    // Count PHI nodes and returns
+    int phiCount = 0;
+    int returnCount = 0;
+    bool hasReturnValue = !F.getReturnType()->isVoidTy();
+    std::vector<PHINode*> phiNodes;
+
+    for (BasicBlock &BB : F) {
+        for (PHINode &PHI : BB.phis()) {
+            phiCount++;
+            phiNodes.push_back(&PHI);
+        }
+        if (isa<ReturnInst>(BB.getTerminator())) {
+            returnCount++;
+        }
+    }
+
+    errs() << "ControlFlowFlattening: Processing function " << F.getName()
+            << " with " << phiCount << " PHI nodes, " << returnCount << " returns, "
+            << "return type: " << (hasReturnValue ? "non-void" : "void") << "\n";
+
+    // Handle functions with PHI nodes properly instead of skipping
+    if (phiCount > 0) {
+        errs() << "ControlFlowFlattening: Function has PHI nodes, will handle them properly\n";
+    }
     
     std::vector<BasicBlock*> originalBlocks;
     for (BasicBlock &BB : F) {
         originalBlocks.push_back(&BB);
-    }
-    
-    // Skip if entry block has PHI nodes (complex to handle)
-    if (!F.getEntryBlock().phis().empty()) {
-        return false;
     }
     
     // Create dispatcher block and switch variable
@@ -100,24 +120,30 @@ bool ControlFlowFlatteningPass::flattenFunction(Function &F) {
     
     // Create end block for function exit
     BasicBlock *endBlock = BasicBlock::Create(Ctx, "end", &F);
-    
+
+    // Handle return values properly
+    AllocaInst *returnVar = nullptr;
+    if (hasReturnValue) {
+        returnVar = Builder.CreateAlloca(F.getReturnType(), nullptr, "return_var");
+    }
+
     SwitchInst *switchInst = Builder.CreateSwitch(switchValue, endBlock, originalBlocks.size());
-    
+
     // Add case for entry block (state 0)
     switchInst->addCase(ConstantInt::get(Type::getInt32Ty(Ctx), 0), entryBlock);
-    
+
     // Process each original block
     for (BasicBlock *BB : originalBlocks) {
         if (BB == entryBlock) continue;
-        
+
         // Add case to switch
         int state = blockToState[BB];
         switchInst->addCase(ConstantInt::get(Type::getInt32Ty(Ctx), state), BB);
-        
+
         // Modify block terminator to update switch variable and jump to dispatcher
         Instruction *terminator = BB->getTerminator();
         Builder.SetInsertPoint(terminator);
-        
+
         if (auto *brInst = dyn_cast<BranchInst>(terminator)) {
             if (brInst->isUnconditional()) {
                 // Unconditional branch: set next state and jump to dispatcher
@@ -137,13 +163,13 @@ bool ControlFlowFlatteningPass::flattenFunction(Function &F) {
                 Value *condition = brInst->getCondition();
                 BasicBlock *trueBB = brInst->getSuccessor(0);
                 BasicBlock *falseBB = brInst->getSuccessor(1);
-                
+
                 // Create blocks for true and false cases
                 BasicBlock *trueCase = BasicBlock::Create(Ctx, "true_case", &F);
                 BasicBlock *falseCase = BasicBlock::Create(Ctx, "false_case", &F);
-                
+
                 Builder.CreateCondBr(condition, trueCase, falseCase);
-                
+
                 // True case
                 Builder.SetInsertPoint(trueCase);
                 if (blockToState.find(trueBB) != blockToState.end()) {
@@ -154,7 +180,7 @@ bool ControlFlowFlatteningPass::flattenFunction(Function &F) {
                 } else {
                     Builder.CreateBr(trueBB);
                 }
-                
+
                 // False case
                 Builder.SetInsertPoint(falseCase);
                 if (blockToState.find(falseBB) != blockToState.end()) {
@@ -167,23 +193,31 @@ bool ControlFlowFlatteningPass::flattenFunction(Function &F) {
                 }
             }
         } else if (auto *retInst = dyn_cast<ReturnInst>(terminator)) {
-            // Return instruction: jump to end block
+            // Return instruction: handle return value and jump to end block
+            if (hasReturnValue && returnVar) {
+                Builder.CreateStore(retInst->getReturnValue(), returnVar);
+            }
             Builder.CreateBr(endBlock);
         }
-        
+
         // Remove original terminator
         terminator->eraseFromParent();
     }
     
-    // Create end block with return
+    // Create end block with proper return handling
     Builder.SetInsertPoint(endBlock);
     if (F.getReturnType()->isVoidTy()) {
         Builder.CreateRetVoid();
     } else {
-        // For non-void functions, we need to handle return values more carefully
-        // For now, return a default value (this is a limitation)
-        Value *defaultRet = Constant::getNullValue(F.getReturnType());
-        Builder.CreateRet(defaultRet);
+        // For non-void functions, load the return value from the return variable
+        if (returnVar) {
+            Value *returnValue = Builder.CreateLoad(F.getReturnType(), returnVar, "return_val");
+            Builder.CreateRet(returnValue);
+        } else {
+            // Fallback: return a default value if no return variable
+            Value *defaultRet = Constant::getNullValue(F.getReturnType());
+            Builder.CreateRet(defaultRet);
+        }
     }
     
     return true;

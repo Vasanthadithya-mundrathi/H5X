@@ -8,6 +8,7 @@
 #include <thread>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
+#include <json/json.h>
 
 namespace h5x {
 
@@ -608,9 +609,9 @@ std::string BlockchainVerifier::create_transaction(const std::string& hash) {
     payload["method"] = "eth_sendTransaction";
     
     Json::Value tx_params;
-    // Use the first account from your Ganache GUI
-    tx_params["from"] = "0x7270fa312791Ac238909E54Fa100cbB7DA3452E8";
-    tx_params["to"] = "0xd36f7d33344e28b8c84ce3542963f2404a0cf391"; // Second account from your Ganache GUI
+    // Use unlocked accounts from Ganache (these accounts are automatically unlocked in Ganache GUI)
+    tx_params["from"] = "0x7270fa312791ac238909e54fa100cbb7da3452e8";
+    tx_params["to"] = "0xd36f7d33344e28b8c84ce3542963f2404a0cf391";
     tx_params["value"] = "0x1"; // Send 1 wei
     tx_params["gas"] = "0x15F90"; // 90000 gas (for transaction with data)
     tx_params["gasPrice"] = "0x4A817C800"; // 20 gwei (matches config)

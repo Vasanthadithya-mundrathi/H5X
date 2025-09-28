@@ -32,13 +32,10 @@ PreservedAnalyses BogusControlFlowPass::run(Module &M, ModuleAnalysisManager &AM
             originalBlocks.push_back(&BB);
         }
         
-        // Add bogus control flow to random blocks
+        // Add bogus control flow to ALL suitable blocks for maximum effect
         for (BasicBlock *BB : originalBlocks) {
-            // 30% chance to add bogus control flow to each block
-            if (dis(gen) < 0.3) {
-                if (addBogusControlFlow(*BB)) {
-                    modified = true;
-                }
+            if (addBogusControlFlow(*BB)) {
+                modified = true;
             }
         }
     }
@@ -47,98 +44,62 @@ PreservedAnalyses BogusControlFlowPass::run(Module &M, ModuleAnalysisManager &AM
 }
 
 bool BogusControlFlowPass::addBogusControlFlow(BasicBlock &BB) {
-    // Don't modify blocks with PHI nodes or complex terminators
+    // Don't modify blocks with PHI nodes, complex terminators, or single instructions
     if (!BB.phis().empty() || 
         isa<InvokeInst>(BB.getTerminator()) ||
-        isa<SwitchInst>(BB.getTerminator())) {
+        isa<SwitchInst>(BB.getTerminator()) ||
+        BB.size() < 3) { // Need at least 2 non-terminator instructions
         return false;
     }
     
     LLVMContext &Ctx = BB.getContext();
     Function *F = BB.getParent();
     
-    // Find a good insertion point (not the terminator)
-    Instruction *insertPoint = nullptr;
+    // Split the block at a safe point (middle of the block)
+    Instruction *splitPoint = nullptr;
+    int instCount = 0;
     for (Instruction &I : BB) {
         if (!I.isTerminator()) {
-            insertPoint = &I;
-        } else {
-            break;
+            instCount++;
+            if (instCount == 2) { // Split after second instruction
+                splitPoint = &I;
+                break;
+            }
         }
     }
     
-    if (!insertPoint) return false;
+    if (!splitPoint) return false;
     
-    // Create opaque predicates (always true or always false, but hard to analyze)
-    IRBuilder<> Builder(insertPoint->getNextNode());
+    // Split the basic block
+    BasicBlock *continuation = BB.splitBasicBlock(splitPoint->getNextNode(), "bogus_continuation");
     
-    // Create an opaque predicate: (x * (x + 1)) % 2 == 0 (always true for integers)
+    // Remove the unconditional branch created by splitBasicBlock
+    BB.getTerminator()->eraseFromParent();
+    
+    // Create opaque predicate (always true: x*x >= 0)
+    IRBuilder<> Builder(&BB);
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> valueDis(1, 100);
     
     Value *x = ConstantInt::get(Type::getInt32Ty(Ctx), valueDis(gen));
-    Value *xPlus1 = Builder.CreateAdd(x, ConstantInt::get(Type::getInt32Ty(Ctx), 1), "bogus_x_plus_1");
-    Value *product = Builder.CreateMul(x, xPlus1, "bogus_product");
-    Value *mod2 = Builder.CreateSRem(product, ConstantInt::get(Type::getInt32Ty(Ctx), 2), "bogus_mod");
-    Value *isEven = Builder.CreateICmpEQ(mod2, ConstantInt::get(Type::getInt32Ty(Ctx), 0), "bogus_is_even");
+    Value *square = Builder.CreateMul(x, x, "bogus_square");
+    Value *isPositive = Builder.CreateICmpSGE(square, ConstantInt::get(Type::getInt32Ty(Ctx), 0), "bogus_predicate");
     
-    // Create bogus blocks
-    BasicBlock *bogusTrue = BasicBlock::Create(Ctx, "bogus_true", F);
-    BasicBlock *bogusFalse = BasicBlock::Create(Ctx, "bogus_false", F);
-    BasicBlock *bogusJoin = BasicBlock::Create(Ctx, "bogus_join", F);
+    // Create bogus blocks that do meaningless work but don't affect program state
+    BasicBlock *bogusBlock = BasicBlock::Create(Ctx, "bogus_dead_code", F);
     
-    // Create the bogus conditional branch
-    Builder.CreateCondBr(isEven, bogusTrue, bogusFalse);
+    // Create conditional branch: always go to continuation, never to bogus
+    Builder.CreateCondBr(isPositive, continuation, bogusBlock);
     
-    // Fill bogus true block with meaningless operations
-    Builder.SetInsertPoint(bogusTrue);
-    Value *bogusVar1 = Builder.CreateAlloca(Type::getInt32Ty(Ctx), nullptr, "bogus_var1");
-    Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 42), bogusVar1);
-    Value *bogusLoad1 = Builder.CreateLoad(Type::getInt32Ty(Ctx), bogusVar1, "bogus_load1");
-    Value *bogusAdd = Builder.CreateAdd(bogusLoad1, ConstantInt::get(Type::getInt32Ty(Ctx), 13), "bogus_add");
-    Builder.CreateStore(bogusAdd, bogusVar1);
-    Builder.CreateBr(bogusJoin);
-    
-    // Fill bogus false block with different meaningless operations
-    Builder.SetInsertPoint(bogusFalse);
-    Value *bogusVar2 = Builder.CreateAlloca(Type::getInt32Ty(Ctx), nullptr, "bogus_var2");
-    Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 17), bogusVar2);
-    Value *bogusLoad2 = Builder.CreateLoad(Type::getInt32Ty(Ctx), bogusVar2, "bogus_load2");
-    Value *bogusMul = Builder.CreateMul(bogusLoad2, ConstantInt::get(Type::getInt32Ty(Ctx), 3), "bogus_mul");
-    Builder.CreateStore(bogusMul, bogusVar2);
-    Builder.CreateBr(bogusJoin);
-    
-    // Bogus join block - continue with original flow
-    Builder.SetInsertPoint(bogusJoin);
-    
-    // Move the rest of the original block after our insertion point to the join block
-    std::vector<Instruction*> instructionsToMove;
-    Instruction *startFrom = insertPoint->getNextNode();
-    
-    while (startFrom && startFrom != BB.getTerminator()) {
-        instructionsToMove.push_back(startFrom);
-        startFrom = startFrom->getNextNode();
-    }
-    
-    // Move instructions to bogus join block
-    for (Instruction *I : instructionsToMove) {
-        I->moveAfter(bogusJoin->getTerminator() ? 
-                     bogusJoin->getTerminator()->getPrevNode() : 
-                     &bogusJoin->back());
-    }
-    
-    // Move the original terminator to bogus join block
-    if (BB.getTerminator()) {
-        Instruction *terminator = BB.getTerminator();
-        terminator->moveAfter(&bogusJoin->back());
-    }
-    
-    // Add branch from bogus join to continue normal execution
-    Builder.SetInsertPoint(bogusJoin);
-    if (!bogusJoin->getTerminator()) {
-        Builder.CreateUnreachable(); // Fallback if no terminator was moved
-    }
+    // Fill bogus block with dead code (unreachable)
+    Builder.SetInsertPoint(bogusBlock);
+    Value *deadVar = Builder.CreateAlloca(Type::getInt32Ty(Ctx), nullptr, "dead_var");
+    Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 0xDEADBEEF), deadVar);
+    Value *deadLoad = Builder.CreateLoad(Type::getInt32Ty(Ctx), deadVar, "dead_load");
+    Value *deadMath = Builder.CreateAdd(deadLoad, ConstantInt::get(Type::getInt32Ty(Ctx), 42), "dead_math");
+    Builder.CreateStore(deadMath, deadVar); // This code never executes
+    Builder.CreateBr(continuation); // Dead branch
     
     return true;
 }
