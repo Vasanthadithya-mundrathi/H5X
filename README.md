@@ -276,6 +276,21 @@ flowchart LR
     E --> F["6. Run Results"]
 ```
 
+### App Screenshots
+
+Captured from the current HEX AI MVP with telemetry loaded through the
+standard upload analysis flow.
+
+| Stage | Screenshot |
+| --- | --- |
+| 1. Import Telemetry | <img src="docs/screenshots/01-import-telemetry.png" alt="HEX AI import telemetry stage" width="720"> |
+| 2. Traffic Intelligence | <img src="docs/screenshots/02-traffic-intelligence.png" alt="HEX AI traffic intelligence stage" width="720"> |
+| 3. Journey Explorer | <img src="docs/screenshots/03-journey-explorer.png" alt="HEX AI journey explorer stage" width="720"> |
+| 4. Scenario Builder | <img src="docs/screenshots/04-scenario-builder.png" alt="HEX AI scenario builder stage" width="720"> |
+| 5. Run Execution | <img src="docs/screenshots/05-run-execution.png" alt="HEX AI run execution stage" width="720"> |
+| 6. Results Comparison | <img src="docs/screenshots/06-results-comparison.png" alt="HEX AI results comparison stage" width="720"> |
+| 7. Method Comparison | <img src="docs/screenshots/07-method-comparison.png" alt="HEX AI method comparison stage" width="720"> |
+
 ### 1. Import and Data Quality
 
 The user uploads telemetry and immediately sees whether the dataset supports
