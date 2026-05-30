@@ -33,6 +33,113 @@ bottlenecks or load-balancer imbalance.
 Observe -> Sanitize -> Learn -> Generate -> Execute Safely -> Validate -> Improve
 ```
 
+## Current MVP
+
+This repository now includes the first working HEX AI MVP slice:
+
+| Layer | Status |
+| --- | --- |
+| React dashboard | Starts empty and requires uploaded telemetry |
+| FastAPI backend | Implemented with upload analysis, scenario generation and run APIs |
+| Analytics engine | Endpoint risk ranking, journey mining, dependency graph and replica imbalance |
+| Input resilience | Gateway logs or OpenTelemetry HTTP traces as primary traffic source, Prometheus/OpenMetrics or CSV pod metrics, multiple files per source, `.gz`/`.zip` telemetry exports, application logs, data-quality warnings and invalid upload rejection |
+| Script generation | k6 Markov state-machine script generated from observed traffic transitions and safe runtime correlation rules |
+| Autonomous agent | Load Balance Agent observes pod metrics or gateway pod tags, selects `load_balance`, and generates a focused k6 probe for the hotspot endpoint |
+| Execution guardrails | Saves script, summary, event and log artifacts under `generated/`; runs real k6 only when explicitly enabled for safe targets |
+
+### Run Locally
+
+Install dependencies:
+
+```bash
+npm install
+python3 -m venv .venv
+.venv/bin/python -m pip install -r backend/requirements.txt
+```
+
+Start the API:
+
+```bash
+.venv/bin/python -m uvicorn backend.app.main:app --reload --port 8000
+```
+
+Start the dashboard in another terminal:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://127.0.0.1:5173
+```
+
+Useful checks:
+
+```bash
+npm run build
+.venv/bin/python -m compileall backend
+npm run test:backend
+curl http://127.0.0.1:8000/api/health
+```
+
+### Latest Verification Results
+
+Validated locally on **2026-05-31**:
+
+| Check | Result |
+| --- | --- |
+| `npm run build` | Passed: Vite production build completed |
+| `npm run check:backend` | Passed: backend Python files compiled successfully |
+| `npm run test:backend` | Passed: 16 backend tests passed |
+| `curl http://127.0.0.1:8000/api/health` | Passed: API returned `{"status":"ok","service":"hex-ai-api"}` |
+| `curl -I http://127.0.0.1:5173/` | Passed: dashboard route returned HTTP 200 after starting Vite dev server |
+| `git check-ignore` | Passed: `prompt.md`, `Update.md`, `generated/`, `dist/`, `node_modules/`, `.venv/` and `.pytest_cache/` are ignored |
+
+Real k6 execution is intentionally guarded. To execute a generated script
+against a local/private/allowlisted performance environment, install `k6` and
+start the backend with:
+
+```bash
+HEX_AI_ENABLE_REAL_K6=1 .venv/bin/python -m uvicorn backend.app.main:app --reload --port 8000
+```
+
+External staging hosts must be explicitly allowlisted with
+`HEX_AI_TARGET_ALLOWLIST=staging.example.com`. Otherwise HEX AI saves the
+generated k6 script but does not claim load-test results.
+
+Runtime test data stays outside generated scripts. Pass staging-safe values
+when running k6:
+
+```bash
+BASE_URL=http://localhost:8080 \
+HEX_AI_USERNAME="$STAGING_USER" \
+HEX_AI_PASSWORD="$STAGING_PASSWORD" \
+HEX_AI_PRODUCTID="$STAGING_PRODUCT_ID" \
+HEX_AI_AUTH_TOKEN="$STAGING_AUTH_TOKEN" \
+k6 run generated/runs/<run-id>/script.js
+```
+
+For richer payloads, set `HEX_AI_TEST_DATA_JSON` from a secret manager or CI
+variable. The generated script also reads individual variables such as
+`HEX_AI_USERNAME`, `HEX_AI_PASSWORD`, `HEX_AI_PRODUCTID`,
+`HEX_AI_PAYMENTMETHOD`, `HEX_AI_CARTID`, and `HEX_AI_ORDERID`.
+
+Secured staging APIs can be tested without editing generated scripts:
+
+```bash
+HEX_AI_AUTH_TOKEN="$STAGING_AUTH_TOKEN" \
+HEX_AI_AUTH_SCHEME=Bearer \
+HEX_AI_API_KEY="$STAGING_API_KEY" \
+HEX_AI_API_KEY_HEADER=x-api-key \
+HEX_AI_EXTRA_HEADERS_JSON='{"x-tenant-id":"perf-tenant"}' \
+k6 run generated/runs/<run-id>/script.js
+```
+
+HEX AI does not embed demo usernames, passwords, fixed product IDs, payment
+values, auth tokens, API keys or tenant headers in the script artifact.
+
 ### Core Value
 
 | Problem | HEX AI Response |
@@ -40,9 +147,9 @@ Observe -> Sanitize -> Learn -> Generate -> Execute Safely -> Validate -> Improv
 | Manual test scripts take time to prepare | Generates runnable k6 scenarios from telemetry |
 | Testing only the busiest API misses important risk | Ranks APIs using latency, errors, dependency fan-out and business criticality |
 | Recorded tests represent only a few selected user actions | Mines repeated journeys across many traces or sessions |
-| Dynamic IDs and tokens break generated scripts | Detects correlations such as `cartId`, `orderId` and `accessToken` |
-| Load tests provide results but not realism evidence | Computes a production fidelity score |
-| Average latency hides routing issues | Detects per-pod traffic imbalance and replica hotspots |
+| Dynamic IDs and tokens break generated scripts | Detects HAR response-to-request correlations such as `cartId`, `csrfToken`, `orderId` and `accessToken` without storing raw values |
+| Load tests provide results but not realism evidence | Separates telemetry readiness, generated workload target mix and real k6 results |
+| Average latency hides routing issues | Detects per-pod traffic imbalance from pod metrics or gateway served-pod tags |
 
 ## Why This Is Different
 
@@ -58,7 +165,8 @@ inside a measurable and governed quality engineering workflow.
 3. **Trace-backed diagnosis:** distributed traces connect a slow public API to
    downstream services such as inventory, payment or a database.
 4. **Load-distribution validation:** the product checks whether replicas share
-   traffic fairly, not only whether response times are acceptable.
+   traffic fairly from pod metrics or gateway `pod_name`/instance tags, not
+   only whether response times are acceptable.
 5. **Fidelity measurement:** generated traffic is compared with the source
    behavior so the test has evidence of realism.
 
@@ -142,7 +250,7 @@ many unfinished integrations.
 | Risk ranking | Weighted traffic, latency, error, fan-out and criticality score |
 | Correlation | Detect common dynamic values in dependent journey calls |
 | Script generation | k6 JavaScript with scenarios, checks and thresholds |
-| Execution | Test against a configured demo or staging URL |
+| Execution | Script artifact by default; real k6 subprocess when enabled and target-safe |
 | Validation | Fidelity score, SLO failures and optional pod imbalance report |
 
 ### Out of Scope for the First MVP
@@ -278,8 +386,8 @@ The results view combines performance outcomes with diagnostic evidence.
 | --- | --- | --- |
 | API gateway logs | timestamp, route, method, status, duration, trace/session ID | Traffic mix and peak load |
 | Application logs | service, business event, error classification | Failure explanation |
-| OpenTelemetry traces | trace ID, spans, service name, route, duration, parent span | Journey and dependency analysis |
-| Pod/instance metrics | pod name, request count, CPU, memory, latency | Replica balance analysis |
+| OpenTelemetry traces | trace ID, spans, service name, route, method, status, duration, parent span | Primary traffic reconstruction, journey and dependency analysis |
+| Pod/instance metrics | CSV or Prometheus/OpenMetrics with service, pod, request count, CPU, latency, error rate | Replica balance analysis |
 | Optional OpenAPI document | operations and schemas | Better request payload templates |
 
 ### Sanitization and Route Normalization
@@ -338,10 +446,11 @@ A production-like workflow often creates values that later requests require:
 | `orderId` | `POST /checkout` | `POST /payment` and tracking |
 | `csrfToken` | Session initialization | Form submission |
 
-The MVP first detects response values reused by later requests in the same
-journey, then creates k6 extraction and reuse statements. AI can explain or
-suggest uncertain matches, but deterministic validation decides whether a
-generated flow is runnable.
+The MVP detects matching fingerprints when HAR response JSON bodies or headers
+are reused by later request bodies or headers in the same session. The original
+values are not stored in the dataset artifact. Generated k6 scripts receive a
+reviewable `correlationRules` block and apply runtime extraction/injection
+during execution.
 
 ### Production Fidelity Score
 
@@ -369,8 +478,9 @@ Example report:
 ### Load-Balance Validation
 
 A service can have acceptable average latency while one replica is overloaded.
-When pod or instance attributes are available, HEX AI identifies this
-failure mode.
+When pod metrics or gateway served-pod attributes are available, HEX AI
+identifies this failure mode and automatically switches the suggested scenario
+to a focused `load_balance` probe.
 
 | Replica | Requests Served | CPU | p95 Latency | Finding |
 | --- | ---: | ---: | ---: | --- |
@@ -386,6 +496,12 @@ Replica Imbalance = standard deviation(requests per replica)
 High imbalance, combined with latency or CPU concentration, can point the QA
 team toward sticky-session configuration, routing policy, connection reuse or
 insufficient scaling investigation.
+
+The generated k6 probe also records `hex_ai_replica_hits` from common
+served-by response headers such as `x-pod-name`, `x-served-by`, or
+`x-upstream-pod`. For real guarded k6 runs, HEX AI writes a JSON event artifact
+and parses those hit samples into top replica, max share, imbalance score and
+pass/fail load-balance evidence.
 
 ## Comparison With Other QA Techniques
 
@@ -440,37 +556,41 @@ testing tools.
 | Can replica analytics expose routing defects? | Detected imbalance compared with known introduced hotspot |
 | How much setup time is reduced? | Time to runnable script compared with manual scripting |
 
-## Proposed MVP Architecture
+## Implemented MVP Architecture
 
-| Layer | Proposed Technology | Responsibility |
+| Layer | Current Technology | Responsibility |
 | --- | --- | --- |
-| Web dashboard | React, Tailwind CSS and Recharts | Upload flow, visualizations and reports |
+| Web dashboard | React, Vite and custom CSS/SVG | Upload flow, visualizations and reports |
 | API service | Python FastAPI | Dataset, scenario and run APIs |
-| Local analytics store | DuckDB and Parquet | Fast telemetry aggregation |
-| Processing | Polars or Pandas | Cleaning, aggregation and feature extraction |
-| Journey analytics | Python and optional scikit-learn | Sequence grouping and clustering |
-| Trace graph | NetworkX | Service dependency analysis |
-| Generator | Jinja2 templates | Predictable k6 script output |
-| Load runner | Grafana k6 | Controlled scenario execution and thresholds |
+| Local artifact store | JSON files under ignored `generated/` | Persist uploaded dataset analysis, generated scripts and run metadata |
+| Processing | Python standard library aggregations | Cleaning, normalization, route grouping and risk scoring |
+| Journey analytics | Session/trace sequence mining plus Markov transitions | Probabilistic workflow modelling |
+| Trace graph | Parent-child span traversal | Service dependency analysis |
+| Generator | Python k6 compiler | Predictable k6 Markov state-machine output |
+| Load runner | Guarded Grafana k6 subprocess | Controlled scenario execution and thresholds |
 | Telemetry standard | OpenTelemetry OTLP JSON | Portable trace input |
-| Demonstration target | OpenTelemetry Demo or DemoShop services | Safe system under test |
+| Target system | Local, private, or allowlisted staging/performance endpoint | Safe system under test |
 
 ## API Sketch
 
 | Endpoint | Purpose |
 | --- | --- |
-| `POST /api/datasets/upload` | Upload logs, traces and optional metrics |
-| `POST /api/datasets/{id}/analyze` | Sanitize and generate intelligence model |
-| `GET /api/datasets/{id}/overview` | Supply dashboard cards and traffic charts |
-| `GET /api/datasets/{id}/journeys` | Return detected workflow models |
-| `GET /api/datasets/{id}/risks` | Return ranked endpoint and service risks |
+| `GET /api/health` | API liveness check |
+| `POST /api/datasets/upload` | Upload gateway logs or OpenTelemetry HTTP traces, plus application logs and optional metrics |
 | `POST /api/scenarios/generate` | Produce a k6 script from selected model |
-| `POST /api/runs` | Execute against an allowlisted environment |
+| `POST /api/runs/start` | Start guarded real run or save blocked dry-run artifact |
+| `GET /api/runs/{id}/status` | Return progress, logs, mode and live metrics |
 | `GET /api/runs/{id}/results` | Return SLO, fidelity and diagnosis findings |
 
-## Sample Input
+## Required Input Example
 
-A simple gateway log can support the first dashboard and route analysis:
+HEX AI accepts either gateway access logs or OpenTelemetry HTTP spans as the
+primary traffic source. A gateway access log needs at least request
+path/route/url, method, status, duration and timestamp. Trace or session IDs
+are strongly recommended for journey mining. HAR browser/API exports and
+enterprise log archives can also be uploaded as multiple files or as bounded
+`.gz`/`.zip` archives under the same source; HEX AI parses each text file
+independently before merging the normalized records:
 
 ```csv
 timestamp,method,route,status,duration_ms,trace_id,session_id,service_name,pod_name
@@ -481,46 +601,11 @@ timestamp,method,route,status,duration_ms,trace_id,session_id,service_name,pod_n
 2026-05-27T10:00:07Z,POST,/payment,200,330,t001,s001,payment,payment-pod-2
 ```
 
-OpenTelemetry trace JSON strengthens this input by identifying child service
-spans and dependency durations inside an end-to-end request.
-
-## Demo Scenario: E-Commerce Checkout
-
-The hackathon demonstration uses a controlled microservice shopping flow:
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant Gateway
-    participant Catalog
-    participant Cart
-    participant Checkout
-    participant Inventory
-    participant Payment
-
-    User->>Gateway: Browse and select product
-    Gateway->>Catalog: GET /products/{id}
-    User->>Gateway: Add item
-    Gateway->>Cart: POST /cart
-    Cart-->>Gateway: cartId
-    User->>Gateway: Complete purchase
-    Gateway->>Checkout: POST /checkout with cartId
-    Checkout->>Inventory: POST /inventory/reserve
-    Checkout->>Payment: POST /payment
-    Checkout-->>Gateway: orderId
-```
-
-### Introduced Finding
-
-For a clear demonstration, one inventory replica is intentionally slow or
-receives disproportionately high traffic. HEX AI should:
-
-1. Discover the purchase journey and its dynamic IDs.
-2. Prioritize checkout due to business relevance and downstream latency.
-3. Generate a checkout-focused k6 scenario.
-4. Run the scenario against the controlled test application.
-5. Report inventory as the likely bottleneck.
-6. Report replica imbalance when pod evidence is supplied.
+OpenTelemetry trace JSON can also stand alone when spans contain HTTP route,
+method, status and duration attributes such as `http.route`,
+`http.request.method` and `http.response.status_code`. In that mode HEX AI
+derives endpoint traffic and journeys from the trace spans without inventing
+gateway rows.
 
 ## Safety and Enterprise Governance
 
@@ -529,8 +614,9 @@ following product rules:
 
 | Control | Purpose |
 | --- | --- |
-| PII and secret masking before analysis | Prevent exposure of sensitive values |
-| Synthetic or tokenized test data | Avoid reuse of customer data |
+| PII and secret masking before persistence | Redact emails, auth tokens, passwords, secrets, JWTs and card-like values from normalized analysis artifacts |
+| Runtime test-data injection | Keep staging users, product IDs, order IDs and payment methods outside generated scripts through `HEX_AI_TEST_DATA_JSON` or `HEX_AI_*` variables |
+| Runtime auth/header injection | Keep bearer tokens, API keys and tenant headers outside generated scripts through `HEX_AI_AUTH_TOKEN`, `HEX_AI_API_KEY` and `HEX_AI_EXTRA_HEADERS_JSON` |
 | Environment allowlist | Prevent accidental load execution on production |
 | Maximum request-rate cap | Limit unsafe load amplification |
 | Threshold-based abort | Stop tests once critical conditions are breached |
@@ -542,9 +628,9 @@ following product rules:
 | Goal | MVP Evidence |
 | --- | --- |
 | Fast script creation | Runnable k6 script generated from uploaded telemetry |
-| Realistic workload | Endpoint and journey fidelity report |
+| Realistic workload | Endpoint and journey target-mix report from uploaded telemetry |
 | Less manual correlation effort | Dynamic value handling in a completed journey |
-| Better bottleneck discovery | Trace-linked service diagnosis after a run |
+| Better bottleneck discovery | Trace-linked service diagnosis from uploaded traces and real k6 results when available |
 | Load-balancer validation | Per-replica imbalance finding where metrics exist |
 | Enterprise suitability | Sanitization, safe target enforcement and script review |
 
@@ -560,14 +646,13 @@ following product rules:
 
 ## References
 
-1. OpenTelemetry, [Demo Application](https://opentelemetry.io/docs/demo/)
-2. OpenTelemetry, [OTLP Specification](https://opentelemetry.io/docs/specs/otlp/)
-3. OpenTelemetry, [HTTP Span Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/http/http-spans/)
-4. Grafana k6, [Scenarios](https://grafana.com/docs/k6/latest/using-k6/scenarios/)
-5. Grafana k6, [Thresholds](https://grafana.com/docs/k6/latest/using-k6/thresholds/)
-6. Grafana k6, [OpenTelemetry Output](https://grafana.com/docs/k6/latest/results-output/real-time/opentelemetry/)
-7. Voegele et al., [WESSBAS: Extraction of Probabilistic Workload Specifications for Load Testing](https://link.springer.com/article/10.1007/s10270-016-0566-5)
-8. Han et al., [LWS: A Framework for Log-based Workload Simulation in Session-based Systems](https://www.sciencedirect.com/science/article/pii/S0164121223001309)
+1. OpenTelemetry, [OTLP Specification](https://opentelemetry.io/docs/specs/otlp/)
+2. OpenTelemetry, [HTTP Span Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/http/http-spans/)
+3. Grafana k6, [Scenarios](https://grafana.com/docs/k6/latest/using-k6/scenarios/)
+4. Grafana k6, [Thresholds](https://grafana.com/docs/k6/latest/using-k6/thresholds/)
+5. Grafana k6, [OpenTelemetry Output](https://grafana.com/docs/k6/latest/results-output/real-time/opentelemetry/)
+6. Voegele et al., [WESSBAS: Extraction of Probabilistic Workload Specifications for Load Testing](https://link.springer.com/article/10.1007/s10270-016-0566-5)
+7. Han et al., [LWS: A Framework for Log-based Workload Simulation in Session-based Systems](https://www.sciencedirect.com/science/article/pii/S0164121223001309)
 
 ---
 

@@ -1,0 +1,23 @@
+{
+  "name": "hex-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HEX AI MVP dashboard for telemetry-driven load test generation.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "backend": "python3 -m uvicorn backend.app.main:app --reload --port 8000",
+    "check:backend": "python3 -m compileall backend",
+    "test:backend": ".venv/bin/python -m pytest backend/tests"
+  },
+  "dependencies": {
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "vite": "^7.3.0"
+  }
+}

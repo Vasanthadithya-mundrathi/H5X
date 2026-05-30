@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+coverage/
+
+# Runtime/generated HEX AI artifacts
+generated/
+*.log
+
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local config and secrets
+.env
+.env.*
+!.env.example
+
+# Local prompt/design/status scratch files
+prompt.md
+Update.md
+update.md
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/
