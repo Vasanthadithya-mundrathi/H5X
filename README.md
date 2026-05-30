@@ -288,7 +288,6 @@ standard upload analysis flow.
 | 3. Journey Explorer | <img src="docs/screenshots/03-journey-explorer.png" alt="HEX AI journey explorer stage" width="720"> |
 | 4. Scenario Builder | <img src="docs/screenshots/04-scenario-builder.png" alt="HEX AI scenario builder stage" width="720"> |
 | 5. Run Execution | <img src="docs/screenshots/05-run-execution.png" alt="HEX AI run execution stage" width="720"> |
-| 6. Results Comparison | <img src="docs/screenshots/06-results-comparison.png" alt="HEX AI results comparison stage" width="720"> |
 | 7. Method Comparison | <img src="docs/screenshots/07-method-comparison.png" alt="HEX AI method comparison stage" width="720"> |
 
 ### 1. Import and Data Quality
