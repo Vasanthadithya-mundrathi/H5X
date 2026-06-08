@@ -30,6 +30,40 @@ const NAV_ITEMS = [
   { id: "comparison", label: "Method Comparison" }
 ];
 
+const SAMPLE_TELEMETRY_FILES = {
+  gatewayLogs: [
+    { path: "/sample-telemetry/hex-ai-gateway.har", name: "hex-ai-gateway.har", type: "application/json" }
+  ],
+  traces: [
+    { path: "/sample-telemetry/hex-ai-traces.json", name: "hex-ai-traces.json", type: "application/json" }
+  ],
+  podMetrics: [
+    { path: "/sample-telemetry/hex-ai-pods.csv", name: "hex-ai-pods.csv", type: "text/csv" }
+  ],
+  applicationLogs: [
+    { path: "/sample-telemetry/hex-ai-app.json", name: "hex-ai-app.json", type: "application/json" }
+  ]
+};
+
+async function fetchSampleTelemetryFiles() {
+  const entries = await Promise.all(
+    Object.entries(SAMPLE_TELEMETRY_FILES).map(async ([key, specs]) => {
+      const files = await Promise.all(
+        specs.map(async (spec) => {
+          const response = await fetch(spec.path);
+          if (!response.ok) {
+            throw new Error(`Could not load ${spec.name}`);
+          }
+          const blob = await response.blob();
+          return new File([blob], spec.name, { type: spec.type });
+        })
+      );
+      return [key, files];
+    })
+  );
+  return Object.fromEntries(entries);
+}
+
 function HexAiLogo({ size = 32 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -721,6 +755,8 @@ function UploadPanel({ onUpload, loading }) {
   const [traces, setTraces] = useState([]);
   const [podMetrics, setPodMetrics] = useState([]);
   const [applicationLogs, setApplicationLogs] = useState([]);
+  const [sampleLoading, setSampleLoading] = useState(false);
+  const [sampleError, setSampleError] = useState("");
 
   function submit(event) {
     event.preventDefault();
@@ -736,6 +772,23 @@ function UploadPanel({ onUpload, loading }) {
     if (!files.length) return "No files selected";
     if (files.length === 1) return files[0].name;
     return `${files.length} files selected`;
+  }
+
+  async function loadSampleTelemetry() {
+    setSampleError("");
+    setSampleLoading(true);
+    try {
+      const sampleFiles = await fetchSampleTelemetryFiles();
+      setGatewayLogs(sampleFiles.gatewayLogs);
+      setTraces(sampleFiles.traces);
+      setPodMetrics(sampleFiles.podMetrics);
+      setApplicationLogs(sampleFiles.applicationLogs);
+      await onUpload(sampleFiles);
+    } catch (err) {
+      setSampleError(err.message || "Sample telemetry could not be loaded");
+    } finally {
+      setSampleLoading(false);
+    }
   }
 
   return (
@@ -767,6 +820,14 @@ function UploadPanel({ onUpload, loading }) {
       <button disabled={(gatewayLogs.length === 0 && traces.length === 0) || loading} type="submit">
         {loading ? "Analyzing..." : "Ingest Telemetry"}
       </button>
+      <div className="sample-telemetry">
+        <span>Demo-ready dataset</span>
+        <p>Load the bundled enterprise checkout sample to exercise HAR correlation, trace diagnosis, pod imbalance, and guarded k6 generation.</p>
+        <button type="button" className="secondary-button" disabled={loading || sampleLoading} onClick={loadSampleTelemetry}>
+          {sampleLoading ? "Loading sample..." : "Load Sample Telemetry"}
+        </button>
+        {sampleError ? <small className="sample-error">{sampleError}</small> : null}
+      </div>
     </form>
   );
 }
@@ -1327,14 +1388,24 @@ function ResultsPanel({ results }) {
     [results],
   );
 
-  const verdictClass = results.status === "passed" ? "passed" : "failed";
+  const verdictClass = results.status === "passed"
+    ? "passed"
+    : results.status === "not_executed"
+      ? "not-executed"
+      : "failed";
+  const verdictColor = results.status === "passed"
+    ? "var(--success)"
+    : results.status === "not_executed"
+      ? "var(--warning)"
+      : "var(--danger)";
+  const verdictReason = results.verdictReason || results.firstFailure;
 
   return (
     <section className={`results-panel glass ${verdictClass}`}>
       <div>
-        <h2>Execution Verdict: <strong style={{ color: results.status === "passed" ? "var(--success)" : "var(--danger)" }}>{results.status.replace("_", " ").toUpperCase()}</strong></h2>
+        <h2>Execution Verdict: <strong style={{ color: verdictColor }}>{results.status.replace("_", " ").toUpperCase()}</strong></h2>
         <p>
-          {results.firstFailure}. Distribution bottleneck located: <strong>{results.bottleneck}</strong> service. {results.loadBalanceFinding}.
+          {verdictReason}. Distribution bottleneck located: <strong>{results.bottleneck}</strong> service. {results.loadBalanceFinding}.
         </p>
       </div>
       <div className="fidelity-grid">

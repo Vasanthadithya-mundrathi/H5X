@@ -2106,9 +2106,11 @@ def _build_source_findings(
 
 
 def _build_not_executed_results(source_findings: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
+    verdict_reason = f"Load test was not executed: {run.get('fallbackReason', 'real runner unavailable')}"
     return {
         "status": "not_executed",
-        "firstFailure": f"Load test was not executed: {run.get('fallbackReason', 'real runner unavailable')}",
+        "firstFailure": verdict_reason,
+        "verdictReason": verdict_reason,
         "bottleneck": source_findings.get("bottleneck", "not detected"),
         "bottleneckShare": source_findings.get("bottleneckShare", 0),
         "loadBalanceFinding": source_findings.get("loadBalanceFinding", "No run data available"),
@@ -2130,9 +2132,11 @@ def _build_real_run_results(runner_summary: dict[str, Any], source_findings: dic
         or (p95 is not None and p95 > 1000)
         or replica_failed
     )
+    verdict_reason = _real_run_failure_summary(p95, failed_rate, replica_distribution)
     return {
         "status": "failed" if failed else "passed",
-        "firstFailure": _real_run_failure_summary(p95, failed_rate, replica_distribution),
+        "firstFailure": verdict_reason,
+        "verdictReason": verdict_reason,
         "bottleneck": source_findings.get("bottleneck", "not detected"),
         "bottleneckShare": source_findings.get("bottleneckShare", 0),
         "loadBalanceFinding": _real_load_balance_finding(replica_distribution, source_findings),
@@ -2384,7 +2388,7 @@ def _real_run_failure_summary(
     if p95 is not None and p95 > 1000:
         return f"k6 reported p95 latency {round(p95, 1)} ms, above 1000 ms threshold"
     if replica_distribution and replica_distribution.get("status") == "failed":
-        return f"Load-balance probe observed {replica_distribution.get('maxSharePercent', 0)}% of sampled requests on one replica"
+        return f"Load-balance probe observed {_display_number(replica_distribution.get('maxSharePercent', 0))}% of sampled requests on one replica"
     if replica_distribution and replica_distribution.get("status") == "insufficient_evidence":
         return "k6 completed, but replica served-by evidence was insufficient for a load-balance verdict"
     return "k6 summary did not breach default failure thresholds"

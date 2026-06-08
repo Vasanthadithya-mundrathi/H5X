@@ -1,0 +1,8 @@
+service_name,pod_name,requests,cpu_percent,p95_latency_ms,error_rate
+checkout,checkout-pod-1,8200,91,890,0.018
+checkout,checkout-pod-2,1450,44,410,0.002
+checkout,checkout-pod-3,1320,39,430,0.001
+payment,payment-pod-1,5100,87,1180,0.041
+payment,payment-pod-2,2450,52,540,0.006
+inventory,inventory-pod-1,6900,94,720,0.012
+inventory,inventory-pod-2,3100,43,360,0.001

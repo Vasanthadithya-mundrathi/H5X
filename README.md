@@ -75,6 +75,11 @@ Open:
 http://127.0.0.1:5173
 ```
 
+For a fast demo, click **Load Sample Telemetry** on the import screen. The
+bundled files under `public/sample-telemetry/` exercise HAR correlation,
+OpenTelemetry traces, pod imbalance metrics and application-log explanation
+through the same upload API used for user-provided telemetry.
+
 Useful checks:
 
 ```bash
@@ -92,7 +97,7 @@ Validated locally on **2026-05-31**:
 | --- | --- |
 | `npm run build` | Passed: Vite production build completed |
 | `npm run check:backend` | Passed: backend Python files compiled successfully |
-| `npm run test:backend` | Passed: 16 backend tests passed |
+| `npm run test:backend` | Passed: 18 backend tests passed |
 | `curl http://127.0.0.1:8000/api/health` | Passed: API returned `{"status":"ok","service":"hex-ai-api"}` |
 | `curl -I http://127.0.0.1:5173/` | Passed: dashboard route returned HTTP 200 after starting Vite dev server |
 | `git check-ignore` | Passed: `prompt.md`, `Update.md`, `generated/`, `dist/`, `node_modules/`, `.venv/` and `.pytest_cache/` are ignored |

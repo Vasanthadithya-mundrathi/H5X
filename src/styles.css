@@ -396,6 +396,45 @@ code {
   padding: 0 1.5rem;
 }
 
+.sample-telemetry {
+  border-top: 1px solid var(--panel-border);
+  display: grid;
+  gap: 0.65rem;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(16rem, 1fr) minmax(18rem, 2fr) auto;
+  align-items: center;
+  padding-top: 1rem;
+}
+
+.sample-telemetry span {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sample-telemetry p {
+  margin: 0;
+}
+
+.sample-telemetry .secondary-button {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.26);
+  box-shadow: none;
+  color: var(--text);
+}
+
+.sample-telemetry .secondary-button:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.12);
+  box-shadow: 0 0 18px rgba(99, 102, 241, 0.18);
+}
+
+.sample-error {
+  color: #fecdd3;
+  grid-column: 2 / -1;
+}
+
 /* Metrics Dashboard */
 .metric-grid {
   display: grid;
@@ -1017,6 +1056,11 @@ tr:hover td {
 .results-panel.failed {
   border-color: rgba(244, 63, 94, 0.25);
   background: linear-gradient(135deg, rgba(244, 63, 94, 0.03), rgba(17, 24, 39, 0.45));
+}
+
+.results-panel.not-executed {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.04), rgba(17, 24, 39, 0.45));
 }
 
 .results-panel p {
@@ -1971,6 +2015,14 @@ tr:hover td {
   .results-panel,
   .execution-summary {
     grid-template-columns: 1fr;
+  }
+
+  .sample-telemetry {
+    grid-template-columns: 1fr;
+  }
+
+  .sample-error {
+    grid-column: auto;
   }
 
   .metric-grid {

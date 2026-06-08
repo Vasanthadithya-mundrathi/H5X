@@ -1,0 +1,10 @@
+[
+  { "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "spanId": "root-a", "parentSpanId": "", "service_name": "gateway", "route": "/checkout", "method": "POST", "status": 200, "timestamp": "2026-05-31T10:00:08Z", "duration_ms": 780 },
+  { "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "spanId": "checkout-a", "parentSpanId": "root-a", "service_name": "checkout", "route": "/checkout", "method": "POST", "status": 200, "timestamp": "2026-05-31T10:00:08Z", "duration_ms": 710 },
+  { "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "spanId": "inventory-a", "parentSpanId": "checkout-a", "service_name": "inventory", "route": "/inventory/reserve", "method": "POST", "status": 200, "timestamp": "2026-05-31T10:00:09Z", "duration_ms": 620 },
+  { "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "spanId": "payment-a", "parentSpanId": "checkout-a", "service_name": "payment", "route": "/payment", "method": "POST", "status": 200, "timestamp": "2026-05-31T10:00:10Z", "duration_ms": 430 },
+  { "traceId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "spanId": "root-b", "parentSpanId": "", "service_name": "gateway", "route": "/checkout", "method": "POST", "status": 200, "timestamp": "2026-05-31T10:01:07Z", "duration_ms": 840 },
+  { "traceId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "spanId": "checkout-b", "parentSpanId": "root-b", "service_name": "checkout", "route": "/checkout", "method": "POST", "status": 200, "timestamp": "2026-05-31T10:01:07Z", "duration_ms": 790 },
+  { "traceId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "spanId": "inventory-b", "parentSpanId": "checkout-b", "service_name": "inventory", "route": "/inventory/reserve", "method": "POST", "status": 200, "timestamp": "2026-05-31T10:01:08Z", "duration_ms": 680 },
+  { "traceId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "spanId": "payment-b", "parentSpanId": "checkout-b", "service_name": "payment", "route": "/payment", "method": "POST", "status": 503, "timestamp": "2026-05-31T10:01:10Z", "duration_ms": 1260 }
+]

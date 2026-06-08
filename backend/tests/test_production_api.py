@@ -607,6 +607,7 @@ def test_guarded_run_does_not_create_fake_metrics_without_real_k6() -> None:
     assert results.status_code == 200, results.text
     payload = results.json()
     assert payload["results"]["status"] == "not_executed"
+    assert payload["results"]["verdictReason"].startswith("Load test was not executed:")
     assert payload["comparisons"]["endpoints"][0]["testRunLatency"] is None
 
 
@@ -686,4 +687,95 @@ def test_real_k6_replica_events_are_reported_as_load_balance_evidence() -> None:
     assert evidence["totalHits"] == 10
     assert evidence["maxSharePercent"] == 80
     assert payload["results"]["status"] == "failed"
+    assert payload["results"]["verdictReason"].startswith("Load-balance probe observed 80%")
     assert "Real k6 observed 10 replica-hit samples" in payload["results"]["loadBalanceFinding"]
+
+
+def test_real_k6_success_result_reports_success_reason() -> None:
+    gateway = b"""timestamp,method,route,status,duration_ms,trace_id,session_id,service_name,pod_name
+2026-05-31T10:00:00Z,GET,/catalog/search,200,80,t1,s1,catalog,catalog-pod-1
+2026-05-31T10:00:01Z,GET,/catalog/search,200,90,t2,s2,catalog,catalog-pod-2
+"""
+    upload = client.post(
+        "/api/datasets/upload",
+        files={"gateway_logs": ("real-k6-success-gateway.csv", gateway, "text/csv")},
+    )
+    assert upload.status_code == 200, upload.text
+
+    run = client.post(
+        "/api/runs/start",
+        json={
+            "datasetName": "real-k6-success-gateway.csv",
+            "testMode": "mirror",
+            "targetUrl": "http://localhost:8080",
+            "duration": "1m",
+            "rateLimit": 10,
+        },
+    )
+    assert run.status_code == 200, run.text
+    run_id = run.json()["runId"]
+    active_run = ACTIVE_RUNS[run_id]
+    active_run["executionMode"] = "real"
+    active_run["status"] = "completed"
+
+    Path(active_run["summaryPath"]).write_text(
+        json.dumps(
+            {
+                "metrics": {
+                    "http_req_duration": {"percentiles": {"95": 120}},
+                    "http_req_failed": {"rate": 0},
+                    "checks": {"rate": 1},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    results = client.get(f"/api/runs/{run_id}/results")
+    assert results.status_code == 200, results.text
+    payload = results.json()
+    assert payload["executionMode"] == "real"
+    assert payload["results"]["status"] == "passed"
+    assert payload["results"]["verdictReason"] == "k6 summary did not breach default failure thresholds"
+    assert payload["results"]["firstFailure"] == payload["results"]["verdictReason"]
+
+
+def test_sample_telemetry_fixture_exercises_full_mvp_flow() -> None:
+    sample_dir = Path(__file__).resolve().parents[2] / "public" / "sample-telemetry"
+
+    response = client.post(
+        "/api/datasets/upload",
+        files=[
+            ("gateway_logs", ("hex-ai-gateway.har", (sample_dir / "hex-ai-gateway.har").read_bytes(), "application/json")),
+            ("traces", ("hex-ai-traces.json", (sample_dir / "hex-ai-traces.json").read_bytes(), "application/json")),
+            ("pod_metrics", ("hex-ai-pods.csv", (sample_dir / "hex-ai-pods.csv").read_bytes(), "text/csv")),
+            ("application_logs", ("hex-ai-app.json", (sample_dir / "hex-ai-app.json").read_bytes(), "application/json")),
+        ],
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["summary"]["requestsImported"] >= 10
+    assert payload["summary"]["routesFound"] >= 6
+    assert payload["summary"]["journeyDetection"] is True
+    assert payload["summary"]["replicaAnalysis"] is True
+    assert payload["summary"]["dynamicCorrelations"] >= 2
+    assert payload["dataQuality"]["capabilities"]["scriptGeneration"] is True
+    assert payload["dataQuality"]["capabilities"]["logExplanation"] is True
+    assert payload["dataQuality"]["capabilities"]["replicaAnalysis"] is True
+    assert payload["autonomousAgent"]["recommendedScenario"] == "load_balance"
+
+    scenario = client.post(
+        "/api/scenarios/generate",
+        json={
+            "datasetName": payload["datasetName"],
+            "testMode": payload["autonomousAgent"]["recommendedScenario"],
+            "targetUrl": "http://localhost:8080",
+            "duration": "1m",
+            "rateLimit": 10,
+        },
+    )
+    assert scenario.status_code == 200, scenario.text
+    script = scenario.json()["k6Script"]
+    assert "loadBalanceProbeFlow" in script
+    assert "correlationRules" in script

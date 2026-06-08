@@ -1,0 +1,26 @@
+[
+  {
+    "timestamp": "2026-05-31T10:00:09Z",
+    "level": "warning",
+    "service": "inventory",
+    "traceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "route": "/inventory/reserve",
+    "message": "inventory reservation latency above baseline for checkout trace"
+  },
+  {
+    "timestamp": "2026-05-31T10:01:10Z",
+    "level": "error",
+    "service": "payment",
+    "traceId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "route": "/payment",
+    "message": "payment authorization timeout after checkout handoff"
+  },
+  {
+    "timestamp": "2026-05-31T10:01:11Z",
+    "level": "error",
+    "service": "checkout",
+    "traceId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "route": "/checkout",
+    "message": "checkout completed with degraded downstream payment dependency"
+  }
+]
