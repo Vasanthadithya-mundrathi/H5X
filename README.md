@@ -63,6 +63,19 @@ Start the API:
 .venv/bin/python -m uvicorn backend.app.main:app --reload --port 8000
 ```
 
+Optional Gemini configuration:
+
+```bash
+cp .env.example .env.local
+# Edit .env.local with your local Gemini key.
+.venv/bin/python -m uvicorn backend.app.main:app --reload --port 8000 --env-file .env.local
+```
+
+The current MVP works without Gemini. When `.env.local` provides
+`HEX_AI_LLM_ENDPOINT` and `HEX_AI_LLM_API_KEY`, the API reports that an LLM is
+configured while keeping analysis, scenario selection and result explanations
+bound to uploaded telemetry evidence.
+
 Start the dashboard in another terminal:
 
 ```bash
