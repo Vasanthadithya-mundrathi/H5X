@@ -6,13 +6,27 @@ import json
 from pathlib import Path
 import zipfile
 
+import pytest
 from fastapi.testclient import TestClient
 
+from backend.app import analyzer
 from backend.app.analyzer import ACTIVE_RUNS
 from backend.app.main import app
 
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def clear_llm_env(monkeypatch) -> None:
+    for key in (
+        "GEMINI_API_KEY",
+        "HEX_AI_LLM_API_KEY",
+        "HEX_AI_LLM_ENDPOINT",
+        "HEX_AI_LLM_MODEL",
+        "HEX_AI_LLM_PROVIDER",
+    ):
+        monkeypatch.delenv(key, raising=False)
 
 
 def test_demo_api_is_not_available() -> None:
@@ -44,6 +58,97 @@ def test_upload_accepts_jsonl_gateway_and_application_logs() -> None:
     assert payload["dataQuality"]["inputs"]["applicationLogs"]["acceptedRows"] == 1
     assert payload["dataQuality"]["capabilities"]["logExplanation"] is True
     assert payload["aiAssistance"]["mode"] == "rules_engine"
+
+
+def test_gemini_assistance_uses_sanitized_evidence(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("GEMINI_API_KEY", "unit-test-key")
+    monkeypatch.setenv("HEX_AI_LLM_ENDPOINT", "https://unit.test/gemini")
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": json.dumps(
+                                        {
+                                            "executiveSummary": "Gemini reviewed sanitized telemetry.",
+                                            "riskNarrative": "Payment risk is high because latency and fan-out are elevated.",
+                                            "scenarioRationale": "Run the load-balance probe selected by deterministic telemetry.",
+                                            "scriptGenerationNotes": ["Generate the k6 script from Markov journeys."],
+                                            "judgeAnswer": "Gemini explains the evidence while deterministic code generates k6.",
+                                            "confidence": "high",
+                                            "cautions": ["Real k6 metrics require guarded execution."],
+                                        }
+                                    )
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "usageMetadata": {"totalTokenCount": 42},
+            }
+
+    class FakeClient:
+        def __init__(self, timeout: float) -> None:
+            captured["timeout"] = timeout
+
+        def __enter__(self) -> "FakeClient":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def post(self, url: str, headers: dict, json: dict) -> FakeResponse:
+            captured["url"] = url
+            captured["api_key"] = headers["x-goog-api-key"]
+            captured["prompt"] = json["contents"][0]["parts"][0]["text"]
+            return FakeResponse()
+
+    monkeypatch.setattr(analyzer.httpx, "Client", FakeClient)
+
+    assistance = analyzer._build_ai_assistance(
+        {"status": "ok", "trafficSource": "gateway", "capabilities": {}, "warnings": ["token=abc123 was masked"]},
+        [
+            {
+                "method": "POST",
+                "route": "/payment",
+                "trafficShare": 0.12,
+                "p95LatencyMs": 950,
+                "errorRate": 0.03,
+                "fanOut": 4,
+                "businessCriticality": 100,
+                "riskScore": 91,
+                "reason": "Critical flow with high latency",
+            }
+        ],
+        [{"name": "Purchase Journey", "sequence": ["POST /cart", "POST /payment"], "observedShare": 0.4}],
+        {"loadBalanceFinding": "payment-pod-2 served 68% of traffic"},
+        {
+            "status": "ready",
+            "recommendedScenario": "load_balance",
+            "objective": "Validate payment distribution",
+            "targetService": "payment",
+            "targetEndpoint": {"method": "POST", "route": "/payment"},
+            "hypothesis": "Traffic should spread across replicas.",
+            "passCriteria": ["Failure rate stays below 1%."],
+        },
+    )
+
+    assert assistance["mode"] == "gemini+rules_engine"
+    assert assistance["llmStatus"] == "completed"
+    assert assistance["summary"]["confidence"] == "high"
+    assert assistance["summary"]["scriptGenerationNotes"] == ["Generate the k6 script from Markov journeys."]
+    assert captured["api_key"] == "unit-test-key"
+    assert captured["url"] == "https://unit.test/gemini"
+    assert "unit-test-key" not in str(captured["prompt"])
+    assert "{MASKED_TOKEN}" in str(captured["prompt"])
 
 
 def test_upload_accepts_nginx_style_access_logs() -> None:
@@ -779,3 +884,6 @@ def test_sample_telemetry_fixture_exercises_full_mvp_flow() -> None:
     script = scenario.json()["k6Script"]
     assert "loadBalanceProbeFlow" in script
     assert "correlationRules" in script
+    assert "applyCorrelationRulesAfterResponse" in script
+    assert "loadBalanceTarget" in script
+    assert "/payment" in script

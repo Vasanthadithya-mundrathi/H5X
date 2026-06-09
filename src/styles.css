@@ -339,10 +339,14 @@ code {
 .upload-panel {
   display: grid;
   gap: 1.25rem;
-  grid-template-columns: minmax(18rem, 1.2fr) repeat(4, minmax(9rem, 1fr)) auto;
+  grid-template-columns: minmax(16rem, 0.8fr) repeat(2, minmax(14rem, 1fr));
   margin-bottom: 1.5rem;
   padding: 1.5rem;
-  align-items: center;
+  align-items: stretch;
+}
+
+.upload-panel > div:first-child {
+  grid-row: span 2;
 }
 
 .upload-panel h2,
@@ -360,6 +364,8 @@ code {
   font-size: 0.8rem;
   gap: 0.4rem;
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .upload-panel small {
@@ -375,10 +381,12 @@ code {
   background: rgba(3, 7, 18, 0.4);
   border: 1px solid var(--panel-border);
   border-radius: 0.5rem;
+  box-sizing: border-box;
   color: var(--muted);
   max-width: 100%;
   padding: 0.5rem;
   transition: border-color 0.2s ease;
+  width: 100%;
 }
 
 .upload-panel input:hover {
@@ -393,6 +401,7 @@ code {
 .upload-panel button {
   height: 2.6rem;
   align-self: end;
+  grid-column: 2 / 4;
   padding: 0 1.5rem;
 }
 
@@ -605,6 +614,92 @@ code {
   display: block;
   font-size: 0.84rem;
   line-height: 1.5;
+}
+
+.ai-assistance-panel {
+  background: rgba(14, 165, 233, 0.05);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  border-radius: 0.9rem;
+  display: grid;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+  min-height: auto;
+  padding: 1rem;
+}
+
+.ai-assistance-panel.completed {
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.ai-assistance-panel.error {
+  border-color: rgba(245, 158, 11, 0.32);
+}
+
+.ai-assistance-panel.compact {
+  margin-bottom: 0;
+}
+
+.ai-assistance-header {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.ai-assistance-header span,
+.ai-assistance-grid span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ai-assistance-header strong {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.ai-assistance-header small,
+.ai-assistance-panel p,
+.ai-assistance-list,
+.ai-warning {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.ai-assistance-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ai-assistance-grid div {
+  background: rgba(3, 7, 18, 0.32);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.7rem;
+  padding: 0.8rem;
+}
+
+.ai-assistance-grid strong {
+  color: var(--text);
+  display: block;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin-top: 0.35rem;
+}
+
+.ai-assistance-list {
+  display: grid;
+  gap: 0.35rem;
+  padding-left: 1rem;
+}
+
+.ai-warning {
+  color: var(--warning);
 }
 
 .agent-panel {
@@ -1016,6 +1111,39 @@ tr:hover td {
 }
 
 /* Script Studio */
+.script-facts {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.script-facts div {
+  background: rgba(3, 7, 18, 0.32);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.7rem;
+  min-width: 0;
+  padding: 0.8rem;
+}
+
+.script-facts span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.script-facts strong {
+  color: var(--text);
+  display: block;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  margin-top: 0.35rem;
+  overflow-wrap: anywhere;
+}
+
 .panel-code pre {
   background: #020617;
   border: 1px solid var(--panel-border);
@@ -2003,22 +2131,31 @@ tr:hover td {
   .upload-panel,
   .metric-grid,
   .quality-grid,
-  .input-contract-grid,
-  .input-contract-grid.ai-grid,
-  .agent-facts,
+	  .input-contract-grid,
+	  .input-contract-grid.ai-grid,
+	  .ai-assistance-grid,
+	  .agent-facts,
   .agent-plan,
   .agent-steps,
   .dashboard-grid,
   .load-balance-evidence,
-  .scenario-builder,
-  .run-grid,
-  .results-panel,
-  .execution-summary {
-    grid-template-columns: 1fr;
-  }
+	  .scenario-builder,
+	  .run-grid,
+	  .results-panel,
+	  .execution-summary,
+	  .script-facts {
+	    grid-template-columns: 1fr;
+	  }
 
-  .sample-telemetry {
-    grid-template-columns: 1fr;
+	  .upload-panel > div:first-child,
+	  .upload-panel button {
+	    grid-column: auto;
+	    grid-row: auto;
+	    width: 100%;
+	  }
+
+	  .sample-telemetry {
+	    grid-template-columns: 1fr;
   }
 
   .sample-error {

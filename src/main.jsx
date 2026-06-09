@@ -335,6 +335,7 @@ function App() {
             <UploadPanel onUpload={handleUpload} loading={loading} />
             <MetricGrid summary={analysis.summary} />
                 <DataQualityPanel dataQuality={uploadQualityIssue || analysis.dataQuality} />
+                <AiAssistancePanel assistance={analysis.aiAssistance} />
                 <CorrelationRulesPanel rules={analysis.correlationRules} />
                 <TelemetryPipeline />
 
@@ -374,9 +375,10 @@ function App() {
         {activeTab === "scenario-builder" && (
           <div className="tab-pane scenario-builder">
             <article className="panel config-card glass">
-              <PanelHeading title="Scenario Builder" subtitle="Customize the performance twin k6 workload model constraints." />
-              <AutonomousAgentPanel agent={analysis.autonomousAgent} onApply={setTestMode} />
-              <CorrelationRulesPanel rules={analysis.correlationRules} compact />
+	              <PanelHeading title="Scenario Builder" subtitle="Customize the performance twin k6 workload model constraints." />
+	              <AutonomousAgentPanel agent={analysis.autonomousAgent} onApply={setTestMode} />
+	              <AiAssistancePanel assistance={analysis.aiAssistance} compact />
+	              <CorrelationRulesPanel rules={analysis.correlationRules} compact />
               <form onSubmit={handleGenerateScript} className="config-card" style={{ padding: 0, border: "none", boxShadow: "none", background: "none", backdropFilter: "none" }}>
                 <div className="config-group">
                   <label>Workload Strategy Profile</label>
@@ -901,6 +903,61 @@ function AiRolePanel() {
   );
 }
 
+function AiAssistancePanel({ assistance, compact = false }) {
+  if (!assistance) return null;
+
+  const summary = assistance.summary || {};
+  const statusLabel = assistance.llmConfigured
+    ? assistance.llmStatus === "completed"
+      ? "Gemini completed"
+      : assistance.llmStatus === "error"
+        ? "Gemini fallback"
+        : "Gemini configured"
+    : "Rules engine only";
+  const notes = summary.scriptGenerationNotes || [];
+  const cautions = summary.cautions || [];
+
+  return (
+    <article className={`ai-assistance-panel glass ${assistance.llmStatus || "not_configured"} ${compact ? "compact" : ""}`}>
+      <div className="ai-assistance-header">
+        <div>
+          <span>{assistance.mode?.replaceAll("_", " ") || "rules engine"}</span>
+          <strong>{statusLabel}</strong>
+        </div>
+        <small>{assistance.provider || "local"} {assistance.model ? `- ${assistance.model}` : ""}</small>
+      </div>
+      {!compact && (
+        <p>{summary.executiveSummary || assistance.note}</p>
+      )}
+      <div className="ai-assistance-grid">
+        <div>
+          <span>Risk readout</span>
+          <strong>{summary.riskNarrative || "Risk will be explained after telemetry upload."}</strong>
+        </div>
+        <div>
+          <span>Scenario rationale</span>
+          <strong>{summary.scenarioRationale || assistance.evidence?.topRiskEndpoint || "Evidence pending."}</strong>
+        </div>
+        <div>
+          <span>Judge answer</span>
+          <strong>{summary.judgeAnswer || assistance.note}</strong>
+        </div>
+      </div>
+      {notes.length > 0 ? (
+        <ul className="ai-assistance-list">
+          {notes.slice(0, compact ? 2 : 4).map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      ) : null}
+      {assistance.llmError ? <p className="ai-warning">Gemini error: {assistance.llmError}</p> : null}
+      {!compact && cautions.length > 0 ? (
+        <p className="ai-warning">{cautions.slice(0, 2).join(" ")}</p>
+      ) : null}
+    </article>
+  );
+}
+
 function DataQualityPanel({ dataQuality }) {
   if (!dataQuality) return null;
 
@@ -1316,6 +1373,18 @@ function LoadBalanceEvidencePanel({ evidence }) {
 
 function ScriptPanel({ script, onExecute }) {
   const preview = script.split("\n").slice(0, 30).join("\n");
+  const flowName = script.includes("loadBalanceProbeFlow")
+    ? "loadBalanceProbeFlow"
+    : script.includes("markovTwinFlow")
+      ? "markovTwinFlow"
+      : "k6 workload";
+  const routeMatch = script.match(/const loadBalanceTarget = [\s\S]*?"route":\s*"([^"]+)"/);
+  const scriptFacts = [
+    ["Execution flow", flowName],
+    ["Correlation runtime", script.includes("applyCorrelationRulesAfterResponse") ? "Ready" : "Not detected"],
+    ["Focus route", routeMatch?.[1] || "Markov journey mix"],
+    ["Script size", `${formatNumber.format(script.length)} chars`],
+  ];
 
   function handleCopy() {
     navigator.clipboard.writeText(script);
@@ -1325,6 +1394,14 @@ function ScriptPanel({ script, onExecute }) {
   return (
     <article className="panel panel-code glass">
       <PanelHeading title="Synthesized k6 Script Output" subtitle="Markov state engine compiled from telemetry; runtime data, auth, API keys and headers are injected through HEX_AI_* env vars." />
+      <div className="script-facts">
+        {scriptFacts.map(([label, value]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
       <pre>{preview}\n// ... [Full Markov state machine logic compiled successfully: click proceed to run]</pre>
       <p style={{ color: "var(--muted)", fontSize: "0.78rem", lineHeight: 1.6, marginTop: "0.75rem" }}>
         Generated scripts avoid embedded demo users, passwords, product IDs, payment values, auth tokens and API keys. Provide staging-safe data and headers at execution time.

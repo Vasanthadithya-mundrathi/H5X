@@ -20,6 +20,8 @@ from typing import Any
 from urllib.parse import urlparse
 from uuid import uuid4
 
+import httpx
+
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 GENERATED_DIR = ROOT_DIR / "generated"
@@ -36,6 +38,8 @@ SECRET_KV_RE = re.compile(
 )
 CREDIT_CARD_RE = re.compile(r"\b(?:\d[ -]*?){13,19}\b")
 ALLOWED_SCENARIOS = {"mirror", "peak", "spike", "breakpoint", "critical", "load_balance"}
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_GEMINI_ENDPOINT_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 # Global stores
 ACTIVE_DATASETS: dict[str, dict[str, Any]] = {}
@@ -2451,10 +2455,14 @@ def _build_ai_assistance(
     autonomous_agent: dict[str, Any],
 ) -> dict[str, Any]:
     hottest_endpoint = endpoints[0] if endpoints else {}
+    llm_config = _llm_config()
 
-    return {
+    assistance = {
         "mode": "rules_engine",
-        "llmConfigured": bool(os.getenv("HEX_AI_LLM_ENDPOINT") and os.getenv("HEX_AI_LLM_API_KEY")),
+        "provider": llm_config["provider"],
+        "model": llm_config["model"],
+        "llmConfigured": llm_config["configured"],
+        "llmStatus": "not_configured" if not llm_config["configured"] else "skipped",
         "recommendedScenario": autonomous_agent["recommendedScenario"],
         "evidence": {
             "dataQuality": data_quality.get("status", "unknown"),
@@ -2462,7 +2470,238 @@ def _build_ai_assistance(
             "journeysDetected": len(journeys),
             "agentStatus": autonomous_agent["status"],
         },
+        "summary": {
+            "executiveSummary": "Telemetry was analyzed with the deterministic rules engine.",
+            "riskNarrative": hottest_endpoint.get("reason", "Risk will be scored after telemetry is uploaded."),
+            "scenarioRationale": autonomous_agent.get("objective", "Scenario selection is based on uploaded telemetry evidence."),
+            "scriptGenerationNotes": [
+                "The generated k6 script is built from observed routes, journey transitions, and safe runtime variables."
+            ],
+            "judgeAnswer": "HEX AI keeps recommendations evidence-bound and does not invent load-test results.",
+            "confidence": "medium" if endpoints else "low",
+            "cautions": data_quality.get("warnings", [])[:2],
+        },
         "note": "AI layer is evidence-bound: schema inference, scenario selection, and explanation use uploaded telemetry only. No synthetic run results are produced without k6 execution.",
+    }
+
+    if not llm_config["configured"]:
+        return assistance
+
+    gemini_response = _request_gemini_assistance(
+        llm_config,
+        _build_llm_evidence_context(data_quality, endpoints, journeys, source_findings, autonomous_agent),
+    )
+    if gemini_response["ok"]:
+        assistance["mode"] = f"{llm_config['provider']}+rules_engine"
+        assistance["llmStatus"] = "completed"
+        assistance["summary"] = gemini_response["summary"]
+        assistance["usage"] = gemini_response.get("usage", {})
+    else:
+        assistance["llmStatus"] = "error"
+        assistance["llmError"] = gemini_response["error"]
+
+    return assistance
+
+
+def _llm_config() -> dict[str, Any]:
+    provider = os.getenv("HEX_AI_LLM_PROVIDER", "gemini").strip().lower() or "gemini"
+    model = os.getenv("HEX_AI_LLM_MODEL", DEFAULT_GEMINI_MODEL).strip() or DEFAULT_GEMINI_MODEL
+    api_key = (os.getenv("GEMINI_API_KEY") or os.getenv("HEX_AI_LLM_API_KEY") or "").strip()
+    endpoint = os.getenv("HEX_AI_LLM_ENDPOINT", "").strip()
+    if not endpoint and provider == "gemini":
+        endpoint = DEFAULT_GEMINI_ENDPOINT_TEMPLATE.format(model=model)
+
+    return {
+        "provider": provider,
+        "model": model,
+        "endpoint": endpoint,
+        "apiKey": api_key,
+        "configured": provider == "gemini" and bool(api_key and endpoint),
+        "timeout": _llm_timeout_seconds(),
+    }
+
+
+def _llm_timeout_seconds() -> float:
+    try:
+        return min(20.0, max(1.0, float(os.getenv("HEX_AI_LLM_TIMEOUT_SECONDS", "15"))))
+    except ValueError:
+        return 15.0
+
+
+def _build_llm_evidence_context(
+    data_quality: dict[str, Any],
+    endpoints: list[dict[str, Any]],
+    journeys: list[dict[str, Any]],
+    source_findings: dict[str, Any],
+    autonomous_agent: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "dataQuality": {
+            "status": data_quality.get("status", "unknown"),
+            "trafficSource": data_quality.get("trafficSource", "none"),
+            "capabilities": data_quality.get("capabilities", {}),
+            "warnings": [_sanitize_text(warning) for warning in data_quality.get("warnings", [])[:3]],
+        },
+        "topRiskEndpoints": [
+            {
+                "method": endpoint.get("method"),
+                "route": endpoint.get("route"),
+                "trafficShare": endpoint.get("trafficShare"),
+                "p95LatencyMs": endpoint.get("p95LatencyMs"),
+                "errorRate": endpoint.get("errorRate"),
+                "fanOut": endpoint.get("fanOut"),
+                "businessCriticality": endpoint.get("businessCriticality"),
+                "riskScore": endpoint.get("riskScore"),
+                "reason": endpoint.get("reason"),
+            }
+            for endpoint in endpoints[:3]
+        ],
+        "journeys": [
+            {
+                "name": journey.get("name"),
+                "sequence": journey.get("sequence", [])[:8],
+                "observedShare": journey.get("observedShare"),
+                "thinkTime": journey.get("thinkTime"),
+                "dynamicValues": journey.get("dynamicValues", []),
+            }
+            for journey in journeys[:2]
+        ],
+        "sourceFindings": {
+            key: _sanitize_text(value)
+            for key, value in source_findings.items()
+            if isinstance(value, str)
+        },
+        "autonomousAgent": {
+            "status": autonomous_agent.get("status"),
+            "recommendedScenario": autonomous_agent.get("recommendedScenario"),
+            "objective": autonomous_agent.get("objective"),
+            "targetService": autonomous_agent.get("targetService"),
+            "targetEndpoint": autonomous_agent.get("targetEndpoint"),
+            "hypothesis": autonomous_agent.get("hypothesis"),
+            "passCriteria": autonomous_agent.get("passCriteria", []),
+        },
+    }
+
+
+def _request_gemini_assistance(config: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
+    prompt = _build_gemini_prompt(evidence)
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 420,
+            "responseMimeType": "application/json",
+        },
+    }
+
+    attempts = _llm_retry_attempts()
+    last_error = ""
+    for attempt in range(attempts):
+        try:
+            with httpx.Client(timeout=config["timeout"]) as client:
+                response = client.post(
+                    config["endpoint"],
+                    headers={
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": config["apiKey"],
+                    },
+                    json=payload,
+                )
+            response.raise_for_status()
+            response_payload = response.json()
+            text = _extract_gemini_text(response_payload)
+            summary = _normalize_llm_summary(_parse_json_object(text))
+            return {"ok": True, "summary": summary, "usage": response_payload.get("usageMetadata", {})}
+        except Exception as exc:
+            last_error = _sanitize_text(str(exc))[:220]
+            if not _should_retry_llm_error(exc) or attempt == attempts - 1:
+                break
+            time.sleep(0.45 * (attempt + 1))
+
+    return {"ok": False, "error": last_error or "Gemini request did not complete"}
+
+
+def _llm_retry_attempts() -> int:
+    try:
+        return min(4, max(1, int(os.getenv("HEX_AI_LLM_RETRIES", "3"))))
+    except ValueError:
+        return 3
+
+
+def _should_retry_llm_error(exc: Exception) -> bool:
+    if isinstance(exc, httpx.TimeoutException):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        status_code = exc.response.status_code
+        return status_code == 429 or status_code >= 500
+    if isinstance(exc, httpx.TransportError):
+        return True
+    return False
+
+
+def _build_gemini_prompt(evidence: dict[str, Any]) -> str:
+    return (
+        "You are assisting HEX AI, a telemetry-driven load-test generator. "
+        "Use only the sanitized JSON evidence below. Do not invent metrics, raw IDs, users, tokens, or k6 results. "
+        "Return strict JSON with these keys: executiveSummary, riskNarrative, scenarioRationale, "
+        "scriptGenerationNotes, judgeAnswer, confidence, cautions. "
+        "scriptGenerationNotes and cautions must be arrays of short strings. "
+        "Keep every sentence concise and demo-ready.\n\n"
+        f"Evidence JSON:\n{json.dumps(evidence, ensure_ascii=True, separators=(',', ':'))}"
+    )
+
+
+def _extract_gemini_text(payload: dict[str, Any]) -> str:
+    candidates = payload.get("candidates") or []
+    if not candidates:
+        return "{}"
+    parts = ((candidates[0].get("content") or {}).get("parts") or [])
+    return "\n".join(str(part.get("text", "")) for part in parts if part.get("text")).strip() or "{}"
+
+
+def _parse_json_object(text: str) -> dict[str, Any]:
+    try:
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else {}
+    except json.JSONDecodeError:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                parsed = json.loads(text[start : end + 1])
+                return parsed if isinstance(parsed, dict) else {}
+            except json.JSONDecodeError:
+                return {}
+        return {}
+
+
+def _normalize_llm_summary(summary: dict[str, Any]) -> dict[str, Any]:
+    def text_value(key: str, fallback: str) -> str:
+        value = summary.get(key, fallback)
+        if isinstance(value, list):
+            value = " ".join(str(item) for item in value)
+        return _sanitize_text(str(value or fallback))[:700]
+
+    def list_value(key: str) -> list[str]:
+        value = summary.get(key, [])
+        if isinstance(value, str):
+            value = [value]
+        if not isinstance(value, list):
+            return []
+        return [_sanitize_text(str(item))[:240] for item in value[:5] if str(item).strip()]
+
+    confidence = text_value("confidence", "medium").lower()
+    if confidence not in {"high", "medium", "low"}:
+        confidence = "medium"
+
+    return {
+        "executiveSummary": text_value("executiveSummary", "Gemini reviewed the sanitized telemetry summary."),
+        "riskNarrative": text_value("riskNarrative", "Risk is based on endpoint traffic, p95 latency, errors, fan-out, and criticality."),
+        "scenarioRationale": text_value("scenarioRationale", "The scenario is selected from deterministic telemetry evidence."),
+        "scriptGenerationNotes": list_value("scriptGenerationNotes"),
+        "judgeAnswer": text_value("judgeAnswer", "HEX AI uses Gemini for evidence-bound explanation while deterministic code generates the k6 script."),
+        "confidence": confidence,
+        "cautions": list_value("cautions"),
     }
 
 

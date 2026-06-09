@@ -72,9 +72,11 @@ cp .env.example .env.local
 ```
 
 The current MVP works without Gemini. When `.env.local` provides
-`HEX_AI_LLM_ENDPOINT` and `HEX_AI_LLM_API_KEY`, the API reports that an LLM is
-configured while keeping analysis, scenario selection and result explanations
-bound to uploaded telemetry evidence.
+`GEMINI_API_KEY` or `HEX_AI_LLM_API_KEY`, the API calls Gemini with a compact
+sanitized evidence summary and returns demo-ready guidance for risk, scenario
+rationale and script review. The deterministic telemetry engine still owns
+analysis, scenario selection and k6 generation, so the project continues to
+work if the external LLM is unavailable.
 
 Start the dashboard in another terminal:
 
