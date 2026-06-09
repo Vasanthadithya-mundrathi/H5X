@@ -94,6 +94,8 @@ For a fast demo, click **Load Sample Telemetry** on the import screen. The
 bundled files under `public/sample-telemetry/` exercise HAR correlation,
 OpenTelemetry traces, pod imbalance metrics and application-log explanation
 through the same upload API used for user-provided telemetry.
+Click **Load Sample ZIPs** to run the same flow through bounded ZIP archive
+decompression for each telemetry source.
 
 Useful checks:
 

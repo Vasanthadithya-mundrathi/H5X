@@ -410,7 +410,7 @@ code {
   display: grid;
   gap: 0.65rem;
   grid-column: 1 / -1;
-  grid-template-columns: minmax(16rem, 1fr) minmax(18rem, 2fr) auto;
+  grid-template-columns: minmax(12rem, 0.8fr) minmax(18rem, 2fr) minmax(11rem, auto) minmax(11rem, auto);
   align-items: center;
   padding-top: 1rem;
 }
@@ -432,6 +432,8 @@ code {
   border: 1px solid rgba(99, 102, 241, 0.26);
   box-shadow: none;
   color: var(--text);
+  grid-column: auto;
+  white-space: nowrap;
 }
 
 .sample-telemetry .secondary-button:hover:not(:disabled) {
@@ -2136,9 +2138,9 @@ tr:hover td {
 	  .ai-assistance-grid,
 	  .agent-facts,
   .agent-plan,
-  .agent-steps,
-  .dashboard-grid,
-  .load-balance-evidence,
+	  .agent-steps,
+	  .dashboard-grid,
+	  .load-balance-evidence,
 	  .scenario-builder,
 	  .run-grid,
 	  .results-panel,
@@ -2147,16 +2149,16 @@ tr:hover td {
 	    grid-template-columns: 1fr;
 	  }
 
-	  .upload-panel > div:first-child,
-	  .upload-panel button {
-	    grid-column: auto;
-	    grid-row: auto;
-	    width: 100%;
-	  }
+  .upload-panel > div:first-child,
+  .upload-panel button {
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
+  }
 
 	  .sample-telemetry {
 	    grid-template-columns: 1fr;
-  }
+	  }
 
   .sample-error {
     grid-column: auto;

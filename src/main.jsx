@@ -45,9 +45,24 @@ const SAMPLE_TELEMETRY_FILES = {
   ]
 };
 
-async function fetchSampleTelemetryFiles() {
+const SAMPLE_TELEMETRY_ZIP_FILES = {
+  gatewayLogs: [
+    { path: "/sample-telemetry/hex-ai-gateway.zip", name: "hex-ai-gateway.zip", type: "application/zip" }
+  ],
+  traces: [
+    { path: "/sample-telemetry/hex-ai-traces.zip", name: "hex-ai-traces.zip", type: "application/zip" }
+  ],
+  podMetrics: [
+    { path: "/sample-telemetry/hex-ai-pods.zip", name: "hex-ai-pods.zip", type: "application/zip" }
+  ],
+  applicationLogs: [
+    { path: "/sample-telemetry/hex-ai-app.zip", name: "hex-ai-app.zip", type: "application/zip" }
+  ]
+};
+
+async function fetchSampleTelemetryFiles(manifest = SAMPLE_TELEMETRY_FILES) {
   const entries = await Promise.all(
-    Object.entries(SAMPLE_TELEMETRY_FILES).map(async ([key, specs]) => {
+    Object.entries(manifest).map(async ([key, specs]) => {
       const files = await Promise.all(
         specs.map(async (spec) => {
           const response = await fetch(spec.path);
@@ -758,6 +773,7 @@ function UploadPanel({ onUpload, loading }) {
   const [podMetrics, setPodMetrics] = useState([]);
   const [applicationLogs, setApplicationLogs] = useState([]);
   const [sampleLoading, setSampleLoading] = useState(false);
+  const [sampleZipLoading, setSampleZipLoading] = useState(false);
   const [sampleError, setSampleError] = useState("");
 
   function submit(event) {
@@ -793,6 +809,23 @@ function UploadPanel({ onUpload, loading }) {
     }
   }
 
+  async function loadSampleTelemetryZip() {
+    setSampleError("");
+    setSampleZipLoading(true);
+    try {
+      const sampleFiles = await fetchSampleTelemetryFiles(SAMPLE_TELEMETRY_ZIP_FILES);
+      setGatewayLogs(sampleFiles.gatewayLogs);
+      setTraces(sampleFiles.traces);
+      setPodMetrics(sampleFiles.podMetrics);
+      setApplicationLogs(sampleFiles.applicationLogs);
+      await onUpload(sampleFiles);
+    } catch (err) {
+      setSampleError(err.message || "Sample ZIP telemetry could not be loaded");
+    } finally {
+      setSampleZipLoading(false);
+    }
+  }
+
   return (
     <form className="upload-panel glass" onSubmit={submit}>
       <div>
@@ -824,9 +857,12 @@ function UploadPanel({ onUpload, loading }) {
       </button>
       <div className="sample-telemetry">
         <span>Demo-ready dataset</span>
-        <p>Load the bundled enterprise checkout sample to exercise HAR correlation, trace diagnosis, pod imbalance, and guarded k6 generation.</p>
+        <p>Load the bundled enterprise checkout sample, or upload the same data as ZIP archives to exercise decompression plus HAR correlation, trace diagnosis, pod imbalance, and guarded k6 generation.</p>
         <button type="button" className="secondary-button" disabled={loading || sampleLoading} onClick={loadSampleTelemetry}>
           {sampleLoading ? "Loading sample..." : "Load Sample Telemetry"}
+        </button>
+        <button type="button" className="secondary-button" disabled={loading || sampleZipLoading} onClick={loadSampleTelemetryZip}>
+          {sampleZipLoading ? "Uploading ZIPs..." : "Load Sample ZIPs"}
         </button>
         {sampleError ? <small className="sample-error">{sampleError}</small> : null}
       </div>

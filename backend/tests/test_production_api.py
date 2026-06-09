@@ -887,3 +887,43 @@ def test_sample_telemetry_fixture_exercises_full_mvp_flow() -> None:
     assert "applyCorrelationRulesAfterResponse" in script
     assert "loadBalanceTarget" in script
     assert "/payment" in script
+
+
+def test_sample_zip_telemetry_fixture_exercises_full_mvp_flow() -> None:
+    sample_dir = Path(__file__).resolve().parents[2] / "public" / "sample-telemetry"
+
+    response = client.post(
+        "/api/datasets/upload",
+        files=[
+            ("gateway_logs", ("hex-ai-gateway.zip", (sample_dir / "hex-ai-gateway.zip").read_bytes(), "application/zip")),
+            ("traces", ("hex-ai-traces.zip", (sample_dir / "hex-ai-traces.zip").read_bytes(), "application/zip")),
+            ("pod_metrics", ("hex-ai-pods.zip", (sample_dir / "hex-ai-pods.zip").read_bytes(), "application/zip")),
+            ("application_logs", ("hex-ai-app.zip", (sample_dir / "hex-ai-app.zip").read_bytes(), "application/zip")),
+        ],
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["summary"]["requestsImported"] >= 10
+    assert payload["summary"]["journeyDetection"] is True
+    assert payload["summary"]["replicaAnalysis"] is True
+    assert payload["summary"]["dynamicCorrelations"] >= 2
+    assert payload["dataQuality"]["inputs"]["gatewayLogs"]["sourceFiles"] == 1
+    assert payload["dataQuality"]["capabilities"]["scriptGeneration"] is True
+    assert payload["autonomousAgent"]["recommendedScenario"] == "load_balance"
+
+    scenario = client.post(
+        "/api/scenarios/generate",
+        json={
+            "datasetName": payload["datasetName"],
+            "testMode": payload["autonomousAgent"]["recommendedScenario"],
+            "targetUrl": "http://localhost:8080",
+            "duration": "1m",
+            "rateLimit": 10,
+        },
+    )
+    assert scenario.status_code == 200, scenario.text
+    script = scenario.json()["k6Script"]
+    assert "loadBalanceProbeFlow" in script
+    assert "applyCorrelationRulesAfterResponse" in script
+    assert "HEX_AI_AUTH_TOKEN" in script
